@@ -58,3 +58,17 @@ test('HTTPS API errors retain transport security and cookie-free authentication 
   assert.equal(response.headers.get('Strict-Transport-Security'), 'max-age=31536000');
   assert.equal(response.headers.get('Cache-Control'), 'no-store');
 });
+
+test('only the exact configured Vercel origin can send proxied writes', async () => {
+  const env = { DB: {}, APP_ORIGIN: 'https://bsitgridview.vercel.app' };
+  for (const origin of [env.APP_ORIGIN, 'https://worker.example']) {
+    const response = await worker.fetch(new Request('https://worker.example/api/logout', { method: 'POST', headers: { Origin: origin } }), env);
+    assert.equal(response.status, 401, 'allowed origin reaches authentication');
+  }
+  for (const origin of ['https://bsitgridview.vercel.app.attacker.example', 'https://preview.vercel.app', 'null', '']) {
+    const response = await worker.fetch(new Request('https://worker.example/api/logout', { method: 'POST', headers: { Origin: origin } }), env);
+    assert.equal(response.status, 403);
+  }
+  const response = await worker.fetch(new Request('https://worker.example/api/logout', { method: 'POST', headers: { Origin: env.APP_ORIGIN } }), { DB: {} });
+  assert.equal(response.status, 403, 'an unset origin cannot authorize external writes');
+});

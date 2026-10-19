@@ -105,7 +105,9 @@ async function api(request, env) {
       return json({ status: 'ok' });
     } catch { return json({ status: 'unavailable' }, 503); }
   }
-  if (!['GET', 'HEAD'].includes(request.method) && request.headers.get('Origin') !== url.origin) return json({ error: 'Request origin is not allowed.' }, 403);
+  const origin = request.headers.get('Origin');
+  const allowedOrigin = env.APP_ORIGIN;
+  if (!['GET', 'HEAD'].includes(request.method) && origin !== url.origin && (!allowedOrigin || origin !== allowedOrigin)) return json({ error: 'Request origin is not allowed.' }, 403);
   if (url.pathname === '/api/login' && request.method === 'POST') {
     const input = await body(request);
     if (!['student', 'admin'].includes(input?.role) || typeof input.identifier !== 'string' || input.identifier.length > 150 || typeof input.password !== 'string' || new TextEncoder().encode(input.password).length > 72) return json({ error: 'Invalid login details.' }, 400);

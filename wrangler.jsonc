@@ -5,6 +5,7 @@
   "compatibility_date": "2026-10-19",
   "workers_dev": true,
   "preview_urls": false,
+  "vars": { "APP_ORIGIN": "https://bsitgridview.vercel.app" },
   "limits": { "cpu_ms": 5000 },
   "observability": { "logs": { "enabled": true, "invocation_logs": false } },
   "triggers": { "crons": ["17 * * * *"] },

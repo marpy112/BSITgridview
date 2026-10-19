@@ -7,6 +7,7 @@
     "test": "node scripts/test-admin.mjs --all",
     "release:check": "npm run build && npm test && node scripts/check-deploy.mjs && wrangler deploy --dry-run",
     "production:smoke": "node scripts/smoke-production.mjs",
+    "vercel:backend": "node scripts/set-vercel-backend.mjs",
     "dev": "npm run cf:dev",
     "dev:frontend": "vite --host 127.0.0.1 --port 5173 --strictPort",
     "build": "vite build",
