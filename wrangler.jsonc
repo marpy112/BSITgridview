@@ -3,6 +3,11 @@
   "name": "bsit-gradeview",
   "main": "server/worker.js",
   "compatibility_date": "2026-10-19",
+  "workers_dev": true,
+  "preview_urls": false,
+  "limits": { "cpu_ms": 5000 },
+  "observability": { "logs": { "enabled": true, "invocation_logs": false } },
+  "triggers": { "crons": ["17 * * * *"] },
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",

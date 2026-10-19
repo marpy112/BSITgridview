@@ -4,7 +4,7 @@ import { validateStudent } from './studentValidation.js';
 
 const COOKIE = 'gradeview_session';
 const SESSION_SECONDS = 60 * 60 * 8;
-const json = (data, status = 200, headers = {}) => Response.json(data, { status, headers: { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', ...headers } });
+const json = (data, status = 200, headers = {}) => Response.json(data, { status, headers: { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'X-Frame-Options': 'DENY', 'Referrer-Policy': 'no-referrer', 'Permissions-Policy': 'camera=(), microphone=(), geolocation=()', 'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none'", ...headers } });
 const digest = async value => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value)))].map(byte => byte.toString(16).padStart(2, '0')).join('');
 
 function cookie(request, token, maxAge) {
@@ -13,9 +13,30 @@ function cookie(request, token, maxAge) {
 }
 
 async function body(request) {
-  const text = await request.text();
-  if (text.length > 4096) throw Object.assign(new Error('Request too large.'), { status: 413 });
-  try { return JSON.parse(text); } catch { throw Object.assign(new Error('Invalid JSON.'), { status: 400 }); }
+  if (request.headers.get('Content-Type')?.split(';')[0].trim().toLowerCase() !== 'application/json') throw Object.assign(new Error('Use application/json.'), { status: 415 });
+  if (Number(request.headers.get('Content-Length')) > 4096) throw Object.assign(new Error('Request too large.'), { status: 413 });
+  const reader = request.body?.getReader();
+  const chunks = [];
+  let size = 0;
+  if (reader) {
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        size += value.byteLength;
+        if (size > 4096) { await reader.cancel(); throw Object.assign(new Error('Request too large.'), { status: 413 }); }
+        chunks.push(value);
+      }
+    } finally { reader.releaseLock(); }
+  }
+  const bytes = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+  try {
+    const input = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
+    if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error();
+    return input;
+  } catch { throw Object.assign(new Error('Send a valid JSON object.'), { status: 400 }); }
 }
 
 export function validateUpdate(input) {
@@ -32,7 +53,7 @@ export function validateUpdate(input) {
 
 async function session(request, db) {
   const token = request.headers.get('Cookie')?.split(';').map(part => part.trim()).find(part => part.startsWith(`${COOKIE}=`))?.slice(COOKIE.length + 1);
-  if (!token) return null;
+  if (!token || !/^[a-f0-9]{64}$/.test(token)) return null;
   return db.prepare(`SELECT a.id, a.role, a.student_no, a.must_change_password FROM sessions s JOIN accounts a ON a.id=s.account_id WHERE s.token_hash=? AND s.expires_at>?`).bind(await digest(token), Math.floor(Date.now() / 1000)).first();
 }
 
@@ -77,6 +98,13 @@ async function api(request, env) {
   const url = new URL(request.url);
   const db = env.DB;
   if (!db) return json({ error: 'Database binding is not configured.' }, 503);
+  if (url.pathname === '/api/health' && request.method === 'GET') {
+    try {
+      const row = await db.prepare('SELECT version FROM academic_calendar WHERE id=1').first();
+      if (!row) throw new Error();
+      return json({ status: 'ok' });
+    } catch { return json({ status: 'unavailable' }, 503); }
+  }
   if (!['GET', 'HEAD'].includes(request.method) && request.headers.get('Origin') !== url.origin) return json({ error: 'Request origin is not allowed.' }, 403);
   if (url.pathname === '/api/login' && request.method === 'POST') {
     const input = await body(request);
@@ -86,7 +114,7 @@ async function api(request, env) {
     const bucket = Math.floor(now / 900);
     const keys = await Promise.all([`ip:${request.headers.get('CF-Connecting-IP') || 'local'}:${bucket}`, `account:${input.role}:${identifier}:${bucket}`].map(digest));
     const limits = await db.batch(keys.map(key => db.prepare('INSERT INTO login_attempts(bucket_key,attempts,expires_at) VALUES(?,1,?) ON CONFLICT(bucket_key) DO UPDATE SET attempts=attempts+1 RETURNING attempts').bind(key, now + 1800)));
-    if (limits[0].results[0].attempts > 50 || limits[1].results[0].attempts > 10) return json({ error: 'Too many sign-in attempts. Try again in 15 minutes.' }, 429);
+    if (limits[0].results[0].attempts > 50 || limits[1].results[0].attempts > 10) return json({ error: 'Too many sign-in attempts. Try again in 15 minutes.' }, 429, { 'Retry-After': String(900 - now % 900) });
     const account = await db.prepare('SELECT * FROM accounts WHERE role=? AND identifier=?').bind(input.role, identifier).first();
     // Use a valid dummy bcrypt hash to avoid revealing whether an account exists by timing.
     const hash = account?.password_hash || '$2b$12$R9h/cIPz0gi.URNNX3kh2OPST9/PgBkqquzi.Ss7KIUgO2t0jWMUW';
@@ -210,9 +238,19 @@ async function api(request, env) {
 }
 
 export default {
+  async scheduled(_event, env) {
+    const now = Math.floor(Date.now() / 1000);
+    await env.DB.batch([
+      env.DB.prepare('DELETE FROM sessions WHERE expires_at<=?').bind(now),
+      env.DB.prepare('DELETE FROM login_attempts WHERE expires_at<=?').bind(now),
+    ]);
+  },
   async fetch(request, env) {
     if (!new URL(request.url).pathname.startsWith('/api/')) return env.ASSETS.fetch(request);
-    try { return await api(request, env); }
-    catch (error) { console.error('API request failed:', error.message); return json({ error: error.status ? error.message : 'The database request failed. Please try again.' }, error.status || 500); }
+    let response;
+    try { response = await api(request, env); }
+    catch (error) { const requestId = crypto.randomUUID(); console.error(JSON.stringify({ event: 'api_error', requestId, method: request.method, status: error.status || 500 })); response = json({ error: error.status ? error.message : 'The request failed. Please try again.', requestId }, error.status || 500); }
+    if (new URL(request.url).protocol === 'https:') response.headers.set('Strict-Transport-Security', 'max-age=31536000');
+    return response;
   },
 };

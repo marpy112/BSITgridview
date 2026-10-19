@@ -14,7 +14,8 @@ function execute(sql) {
   const file = path.resolve(`.db-account-${crypto.randomUUID()}.sql`);
   try {
     fs.writeFileSync(file,sql);
-    const result = spawnSync(process.execPath,['node_modules/wrangler/bin/wrangler.js','d1','execute','bsit-gradeview-db','--local','--file',file,'--json'],{encoding:'utf8',env:{...process.env,WRANGLER_LOG_PATH:'.wrangler/logs',WRANGLER_SEND_METRICS:'false'}});
+    const config = process.env.GRADEVIEW_TEST_CONFIG ? ['--config',process.env.GRADEVIEW_TEST_CONFIG] : [];
+    const result = spawnSync(process.execPath,['node_modules/wrangler/bin/wrangler.js','d1','execute','bsit-gradeview-db','--local','--file',file,'--json',...config],{encoding:'utf8',env:{...process.env,WRANGLER_LOG_PATH:'.wrangler/logs',WRANGLER_SEND_METRICS:'false'}});
     assert.equal(result.status,0,result.stderr || result.stdout);
     return JSON.parse(result.stdout);
   } finally { fs.rmSync(file,{force:true}); }

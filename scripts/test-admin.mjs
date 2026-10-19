@@ -24,8 +24,9 @@ try{
     await new Promise(resolve=>setTimeout(resolve,200));
   }
   if(!ready)throw new Error('Isolated test server did not become ready.\n'+output);
-  console.log('Running admin tests against an isolated local database; existing school records are untouched.');
-  const result=spawnSync(process.execPath,['--test','tests/admin-management.test.mjs'],{env:{...env,GRADEVIEW_TEST_URL:base},stdio:'inherit'});
+  console.log('Running tests against an isolated local database; existing school records are untouched.');
+  const files = process.argv.includes('--all') ? ['tests/database.test.mjs','tests/onboarding.test.mjs','tests/admin-management.test.mjs','tests/production.test.mjs','tests/pdf-export.test.mjs'] : ['tests/admin-management.test.mjs'];
+  const result=spawnSync(process.execPath,['--test','--test-concurrency=1',...files],{env:{...env,GRADEVIEW_TEST_URL:base},stdio:'inherit'});
   process.exitCode=result.status??1;
 }finally{
   if(server.pid){if(process.platform==='win32')spawnSync('taskkill',['/PID',String(server.pid),'/T','/F'],{stdio:'ignore',windowsHide:true});else server.kill('SIGTERM');}

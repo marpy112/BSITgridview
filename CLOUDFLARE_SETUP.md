@@ -125,7 +125,7 @@ Sessions use HttpOnly, SameSite cookies, with Secure enabled on HTTPS. Record up
 - **`npm.ps1 cannot be loaded`:** use `npm.cmd` and `npx.cmd` as shown above.
 - **Missing tables:** run the migration command for the same target you are using (`local` or `remote`).
 - **`5173/api/login` returns 404:** restart Vite to load `vite.config.js`, which proxies `/api` to port 8787, and keep `npm.cmd run cf:dev` running. Alternatively open `http://127.0.0.1:8787` directly. To run both servers, use `cf:dev` in one terminal and `dev:frontend` in another.
-- **No students in the remote dashboard:** create student accounts using step 5. Demo students exist locally only.
+- **No students in the remote dashboard:** create student accounts using step 5 or import the private master list into the remote database.
 - **Database binding errors:** confirm `wrangler.jsonc` contains the returned D1 ID and binding `DB`, then redeploy.
 - **Local and hosted records differ:** local D1 and cloud D1 are separate databases. Use the deployed site for hosted records.
 - **Deployment stops on the placeholder ID:** finish steps 2–4.

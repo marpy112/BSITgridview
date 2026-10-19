@@ -48,7 +48,7 @@ Source wording is preserved, including PE 2's `PATHFIT 1` title, `PROFEL1` as th
 
 Includes the four-year curriculum, status filters, course/instructor search, course details, PDF export, a student profile, and a dark theme. Curriculum data comes from the supplied document. Edits are saved in D1 and the portal shows the signed-in student's own profile. Fonts load from Google Fonts when online, with system fallbacks.
 
-## Login and administrator prototype
+## Login and administrator access
 
 - Student login: `/#/student/login` — student ID and initial surname password; a personal password is required after first login.
 - Admin login: `/#/admin/login` — your provisioned administrator email and password.
@@ -69,7 +69,7 @@ npm install
 npm run dev
 ```
 
-Open the local URL printed by Vite. On Windows PowerShell with restricted script execution, use `npm.cmd` in place of `npm`.
+Open the local URL printed by Wrangler. On Windows PowerShell with restricted script execution, use `npm.cmd` in place of `npm`.
 
 ```sh
 npm run build
@@ -79,6 +79,8 @@ npm run preview
 The production build is generated in `dist/`. Use `npm ci` for repeat installs after the lockfile has been created. `npm run preview` serves the frontend build only; use `cf:dev` to include the API and D1. Run `npm run test:api` against a running, locally seeded `cf:dev` server to check login, permissions, persistence, and logout.
 
 ## Source
+
+For production settings, database backup, release checks, deployment, monitoring, and recovery limitations, see [PRODUCTION.md](PRODUCTION.md). Run `npm run release:check` before deployment.
 
 - `src/App.jsx`: React components, interactive filters, modal details, export, and theme state.
 - `src/PortalApp.jsx`: role navigation and database sessions.
