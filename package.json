@@ -1,0 +1,41 @@
+{
+  "name": "gradeview",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "npm run cf:dev",
+    "dev:frontend": "vite --host 127.0.0.1 --port 5173 --strictPort",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "cf:dev": "npm run build && wrangler dev --ip 127.0.0.1",
+    "cf:deploy": "node scripts/check-deploy.mjs && npm run build && wrangler deploy",
+    "cf:login": "wrangler login",
+    "db:create": "wrangler d1 create bsit-gradeview-db",
+    "db:bind": "node scripts/set-database-id.mjs",
+    "db:migrate:local": "wrangler d1 migrations apply bsit-gradeview-db --local",
+    "db:migrate:remote": "node scripts/check-deploy.mjs && wrangler d1 migrations apply bsit-gradeview-db --remote",
+    "db:account": "node scripts/create-account.mjs",
+    "test:api": "node --test tests/database.test.mjs",
+    "db:import-students": "node scripts/import-students.mjs",
+    "test:onboarding": "node --test tests/onboarding.test.mjs",
+    "test:pdf": "node --test tests/pdf-export.test.mjs",
+    "test:admin": "node scripts/test-admin.mjs"
+  },
+  "dependencies": {
+    "bcryptjs": "3.0.3",
+    "jspdf": "4.2.1",
+    "jspdf-autotable": "5.0.9",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "6.1.2",
+    "pdfjs-dist": "6.4.299",
+    "vite": "8.3.4",
+    "wrangler": "4.151.1"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  }
+}

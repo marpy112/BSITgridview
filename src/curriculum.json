@@ -1,0 +1,614 @@
+[
+  {
+    "code": "GE CORE 1",
+    "title": "Understanding the self",
+    "units": 3,
+    "prerequisite": "NONE",
+    "year": 1,
+    "semester": "1",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "GE CORE 2",
+    "title": "Readings in Philippine History",
+    "units": 3,
+    "prerequisite": "NONE",
+    "year": 1,
+    "semester": "1",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "GE CORE 3",
+    "title": "The Contemporary World",
+    "units": 3,
+    "prerequisite": "NONE",
+    "year": 1,
+    "semester": "1",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "GE CORE 4",
+    "title": "Mathematics in the Modern World",
+    "units": 3,
+    "prerequisite": "NONE",
+    "year": 1,
+    "semester": "1",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "IT 01",
+    "title": "Introduction to Computing",
+    "units": 3,
+    "prerequisite": "NONE",
+    "year": 1,
+    "semester": "1",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "IT 02",
+    "title": "Computer Programming 1",
+    "units": 3,
+    "prerequisite": "NONE",
+    "year": 1,
+    "semester": "1",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "IT 03",
+    "title": "IT Fundamentals",
+    "units": 3,
+    "prerequisite": "NONE",
+    "year": 1,
+    "semester": "1",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "NSTP 1",
+    "title": "Civic Welfare Training Service 1",
+    "units": 3,
+    "prerequisite": "NONE",
+    "year": 1,
+    "semester": "1",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "PE 1",
+    "title": "PATHFIT 1 Movement Competency Training",
+    "units": 2,
+    "prerequisite": "NONE",
+    "year": 1,
+    "semester": "1",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "SGP 1",
+    "title": "School Guidance Program 1",
+    "units": 1,
+    "prerequisite": "NONE",
+    "year": 1,
+    "semester": "1",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "GE CORE 5",
+    "title": "Purposive Communication",
+    "units": 3,
+    "prerequisite": "NONE",
+    "year": 1,
+    "semester": "2",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "GE CORE 6",
+    "title": "Art Appreciation",
+    "units": 3,
+    "prerequisite": "NONE",
+    "year": 1,
+    "semester": "2",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "NAT SCI 1",
+    "title": "Ecology",
+    "units": 3,
+    "prerequisite": "NONE",
+    "year": 1,
+    "semester": "2",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "IT 04",
+    "title": "Computer Programming 2",
+    "units": 3,
+    "prerequisite": "IT 02",
+    "year": 1,
+    "semester": "2",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "IT 05",
+    "title": "Introduction to Human Computer Interaction",
+    "units": 3,
+    "prerequisite": "IT 03",
+    "year": 1,
+    "semester": "2",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "IT 06",
+    "title": "Discrete Mathematics",
+    "units": 3,
+    "prerequisite": "IT 01",
+    "year": 1,
+    "semester": "2",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "NSTP 2",
+    "title": "Civic Welfare Training Service 2",
+    "units": 3,
+    "prerequisite": "NSTP 1",
+    "year": 1,
+    "semester": "2",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "PE 2",
+    "title": "PATHFIT 1 Exercise-based Fitness Activities",
+    "units": 2,
+    "prerequisite": "PE 1",
+    "year": 1,
+    "semester": "2",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "SGP 2",
+    "title": "School Guidance Program 2",
+    "units": 1,
+    "prerequisite": "NONE",
+    "year": 1,
+    "semester": "2",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "PHILO 1",
+    "title": "Logic",
+    "units": 3,
+    "prerequisite": "NONE",
+    "year": 1,
+    "semester": "summer",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "GE ELEC",
+    "title": "Environmental Science",
+    "units": 3,
+    "prerequisite": "NONE",
+    "year": 1,
+    "semester": "summer",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "LIT 1",
+    "title": "Philippine Literature",
+    "units": 3,
+    "prerequisite": "NONE",
+    "year": 1,
+    "semester": "summer",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "GE CORE 7",
+    "title": "Science, Technology and Society",
+    "units": 3,
+    "prerequisite": "NONE",
+    "year": 2,
+    "semester": "1",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "GE CORE 8",
+    "title": "Ethics",
+    "units": 3,
+    "prerequisite": "NONE",
+    "year": 2,
+    "semester": "1",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "GE ELEC 2",
+    "title": "Gender and Society",
+    "units": 3,
+    "prerequisite": "NONE",
+    "year": 2,
+    "semester": "1",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "IT 07",
+    "title": "Data Structure & Algorithms",
+    "units": 3,
+    "prerequisite": "IT 04",
+    "year": 2,
+    "semester": "1",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "IT 08",
+    "title": "Platform Technologies",
+    "units": 3,
+    "prerequisite": "IT 03",
+    "year": 2,
+    "semester": "1",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "IT 09",
+    "title": "Object-oriented Programming",
+    "units": 3,
+    "prerequisite": "IT 04",
+    "year": 2,
+    "semester": "1",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "IT 10",
+    "title": "Principles of Logic Design",
+    "units": 3,
+    "prerequisite": "IT 04",
+    "year": 2,
+    "semester": "1",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "PE 3",
+    "title": "PATHFIT 3 Fundamentals of Martial Art",
+    "units": 2,
+    "prerequisite": "PE 2",
+    "year": 2,
+    "semester": "1",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "GE PIC",
+    "title": "Philippine Indigenous Community",
+    "units": 3,
+    "prerequisite": "NONE",
+    "year": 2,
+    "semester": "1",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "SGP 3",
+    "title": "School Guidance Program 3",
+    "units": 1,
+    "prerequisite": "NONE",
+    "year": 2,
+    "semester": "1",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "GE ELEC 3",
+    "title": "Philippine Popular Culture",
+    "units": 3,
+    "prerequisite": "NONE",
+    "year": 2,
+    "semester": "2",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "RIZAL",
+    "title": "Life & Works of Rizal",
+    "units": 3,
+    "prerequisite": "NONE",
+    "year": 2,
+    "semester": "2",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "BL 1",
+    "title": "The Law on Obligation & Contract",
+    "units": 3,
+    "prerequisite": "NONE",
+    "year": 2,
+    "semester": "2",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "IT 11",
+    "title": "Applied Calculus in IT",
+    "units": 3,
+    "prerequisite": "NONE",
+    "year": 2,
+    "semester": "2",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "IT 12",
+    "title": "Information Management",
+    "units": 3,
+    "prerequisite": "IT 07",
+    "year": 2,
+    "semester": "2",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "IT 13",
+    "title": "Quantitative Methods",
+    "units": 3,
+    "prerequisite": "IT 01, IT 04",
+    "year": 2,
+    "semester": "2",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "IT 14",
+    "title": "Networking 1",
+    "units": 3,
+    "prerequisite": "IT 07, IT 10",
+    "year": 2,
+    "semester": "2",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "IT 15",
+    "title": "Integrative Programming and Technologies 1",
+    "units": 3,
+    "prerequisite": "IT 08, IT 09",
+    "year": 2,
+    "semester": "2",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "PE 4",
+    "title": "PATHFIT 4 Sports- Basketball",
+    "units": 2,
+    "prerequisite": "PE 3",
+    "year": 2,
+    "semester": "2",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "SGP 4",
+    "title": "School Guidance Program 4",
+    "units": 1,
+    "prerequisite": "NONE",
+    "year": 2,
+    "semester": "2",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "PROF ELEC 1",
+    "title": "Technopreneurship",
+    "units": 3,
+    "prerequisite": "IT 12",
+    "year": 3,
+    "semester": "1",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "IT 16",
+    "title": "Fundamentals of Database System",
+    "units": 3,
+    "prerequisite": "IT 15",
+    "year": 3,
+    "semester": "1",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "IT 17",
+    "title": "System Integration and Architecture 1",
+    "units": 3,
+    "prerequisite": "IT 09, IT 10",
+    "year": 3,
+    "semester": "1",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "IT 18",
+    "title": "Networking 2",
+    "units": 3,
+    "prerequisite": "IT 14",
+    "year": 3,
+    "semester": "1",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "IT 19",
+    "title": "Information Assurance and Security",
+    "units": 3,
+    "prerequisite": "IT 12",
+    "year": 3,
+    "semester": "1",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "IT 20",
+    "title": "Integrative Programming and Technologies 2",
+    "units": 3,
+    "prerequisite": "IT 15",
+    "year": 3,
+    "semester": "1",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "SOC SCI 1",
+    "title": "Society & Culture with Family Planning",
+    "units": 3,
+    "prerequisite": "NONE",
+    "year": 3,
+    "semester": "1",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "SGP 5",
+    "title": "School Guidance Program 5",
+    "units": 1,
+    "prerequisite": "NONE",
+    "year": 3,
+    "semester": "1",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "IT 21",
+    "title": "Information Assurance and Security 2",
+    "units": 3,
+    "prerequisite": "IT 19",
+    "year": 3,
+    "semester": "2",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "IT 22",
+    "title": "Advanced Database Systems",
+    "units": 3,
+    "prerequisite": "IT 16",
+    "year": 3,
+    "semester": "2",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "IT 23",
+    "title": "Systems Integration and Architecture 2",
+    "units": 3,
+    "prerequisite": "IT 17",
+    "year": 3,
+    "semester": "2",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "IT 24",
+    "title": "Application Development and Emerging Technologies",
+    "units": 3,
+    "prerequisite": "IT 21, IT 17",
+    "year": 3,
+    "semester": "2",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "IT 25",
+    "title": "Multimedia System",
+    "units": 3,
+    "prerequisite": "IT 03",
+    "year": 3,
+    "semester": "2",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "IT 26",
+    "title": "Capstone Project and Research 1",
+    "units": 3,
+    "prerequisite": "IT 09, IT 12, IT 14, IT 07",
+    "year": 3,
+    "semester": "2",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "IT 27",
+    "title": "Web Systems and Technologies",
+    "units": 3,
+    "prerequisite": "IT 21, IT 16",
+    "year": 3,
+    "semester": "2",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "IT 28",
+    "title": "Event-Driven Programming",
+    "units": 3,
+    "prerequisite": "IT 17, IT 18",
+    "year": 3,
+    "semester": "2",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "SGP 6",
+    "title": "School Guidance Program",
+    "units": 1,
+    "prerequisite": "NONE",
+    "year": 3,
+    "semester": "2",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "PEACE ED",
+    "title": "Peace Education",
+    "units": 3,
+    "prerequisite": "NONE",
+    "year": 4,
+    "semester": "1",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "PROF ELEC 2",
+    "title": "Innovative Leadership in Education",
+    "units": 3,
+    "prerequisite": "PROFEL1",
+    "year": 4,
+    "semester": "1",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "PROF ELEC 3",
+    "title": "Digital Marketing",
+    "units": 3,
+    "prerequisite": "IT 24",
+    "year": 4,
+    "semester": "1",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "PROF ELEC 4",
+    "title": "Business Analytics",
+    "units": 3,
+    "prerequisite": "IT 22, IT 13",
+    "year": 4,
+    "semester": "1",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "IT 29",
+    "title": "Systems Administration and Maintenance",
+    "units": 3,
+    "prerequisite": "IT 23",
+    "year": 4,
+    "semester": "1",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "IT 30",
+    "title": "Quality Consciousness, Habits and Processes",
+    "units": 3,
+    "prerequisite": "IT 13",
+    "year": 4,
+    "semester": "1",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "IT 31",
+    "title": "Capstone Project and Research 2",
+    "units": 3,
+    "prerequisite": "IT 26",
+    "year": 4,
+    "semester": "1",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "IT 32",
+    "title": "Social and Professional Issues in IT",
+    "units": 3,
+    "prerequisite": "IT 24",
+    "year": 4,
+    "semester": "1",
+    "sourceRequirementColumn": "Pre-Requisite"
+  },
+  {
+    "code": "OJT",
+    "title": "Practice",
+    "units": 12,
+    "prerequisite": "Completed all major/professional course Capstone/Research 1, 2",
+    "year": 4,
+    "semester": "2",
+    "sourceRequirementColumn": "Labhours"
+  }
+]
