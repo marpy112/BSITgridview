@@ -1,3 +1,4 @@
+import { nextRetakeTerm, retakeLabel } from '../shared/retakes.js';
 import { termLabels, yearLabels } from './data.js';
 
 export async function createPdf(headers, rows, { title = 'Data report', metadata = [] } = {}) {
@@ -72,7 +73,16 @@ export async function downloadPdf(filename, headers, rows, options) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export const courseHeaders = ['Year', 'Term', 'Course code', 'Descriptive title', 'Instructor', 'Units', 'Grade', 'Status', 'Prerequisite / OJT requirement', 'School year taken', 'Term taken'];
+export const courseHeaders = ['Year', 'Term', 'Course code', 'Descriptive title', 'Instructor', 'Units', 'Grade', 'Status', 'Prerequisite / OJT requirement', 'School year taken', 'Term taken', 'Transferred school', 'Retake / attempts'];
 export function courseExportRows(courses) {
-  return courses.map(course => [yearLabels[course.year], termLabels[course.semester], course.code, course.title, course.instructor, course.units, course.grade === null ? 'Pending' : course.grade.toFixed(2), course.status, course.prerequisite, course.academicYearTaken || 'Not recorded', termLabels[course.semesterTaken] || 'Not recorded']);
+  return courses.map(course => [yearLabels[course.year], termLabels[course.semester], course.code, course.title, course.instructor, course.units, course.grade === null ? 'Pending' : course.grade.toFixed(2), course.status, course.prerequisite, course.academicYearTaken || 'Not recorded', termLabels[course.semesterTaken] || 'Not recorded', course.transferSchool || '', retakeSummary(course)]);
+}
+
+function retakeSummary(course) {
+  const next = course.status === 'Failed' ? nextRetakeTerm(course.academicYearTaken, course.semesterTaken) : null;
+  return [
+    ...(next ? ['Retake: ' + retakeLabel(next)] : []),
+    ...(course.attemptNumber > 1 ? ['Current attempt: ' + course.attemptNumber] : []),
+    ...(course.pastAttempts || []).map(attempt => 'Attempt ' + attempt.attemptNumber + ': ' + attempt.grade.toFixed(2) + ' Failed / ' + retakeLabel({ schoolYear: attempt.academicYearTaken, semester: attempt.semesterTaken }) + (attempt.transferSchool ? ' / ' + attempt.transferSchool : '')),
+  ].join('\n');
 }

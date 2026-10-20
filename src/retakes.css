@@ -1,0 +1,19 @@
+.retake-note{display:block;font-size:10px;line-height:1.7;color:#a16a32;margin-top:7px;white-space:normal;letter-spacing:0;font-weight:500}
+.retake-start-button{border:1px solid #e7d7be;border-radius:6px;padding:6px 9px;color:#8c5e2e;background:#fff9ee;font-size:10px;margin-top:8px;min-height:32px}
+.retake-start-button:disabled{opacity:.5;cursor:default}
+.attempt-history{font-size:10px;color:var(--text);line-height:1.7;margin-top:9px;letter-spacing:0;white-space:normal;font-weight:400}
+.attempt-history summary{cursor:pointer;color:var(--blue);font-size:10px;letter-spacing:0;font-weight:500}
+.attempt-history ol{padding:0;list-style:none;margin:10px 0 0;display:grid;gap:10px}
+.attempt-history li{padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--bg)}
+.attempt-history li>strong,.attempt-history li>span{display:block;font-size:10px;line-height:1.7}
+.attempt-history li>span{color:var(--muted)}
+.student-retakes{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:22px;margin-bottom:23px}
+.student-retakes h2{font-size:16px;letter-spacing:-.3px;margin:0}
+.student-retakes h2>span{font-size:10px;background:#fff2df;color:#a16a32;padding:3px 6px;border-radius:4px;margin-left:6px}
+.student-retakes p{font-size:11px;color:var(--muted);line-height:1.7;margin:9px 0 0}
+.student-retakes ul{list-style:none;margin:16px 0 0;padding:0;display:grid;gap:13px}
+.student-retakes li{display:flex;align-items:center;justify-content:space-between;gap:16px;border-top:1px solid var(--line);padding-top:13px}
+.student-retakes li strong{font-size:12px;line-height:1.6}
+.student-retakes li .secondary-button{font-size:10px;flex-shrink:0}
+.course-card .retake-note{margin-bottom:12px}
+@media(max-width:600px){.student-retakes{padding:16px}.student-retakes li{align-items:flex-start;flex-direction:column;gap:10px}.retake-note{font-size:11px}}

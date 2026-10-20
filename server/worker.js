@@ -1,6 +1,8 @@
 import { compare, hash as hashPassword } from 'bcryptjs';
 import { nextAcademicTerm, academicYearLabel, academicTermLabel } from '../shared/academic.js';
 import { validateStudent } from './studentValidation.js';
+import { normalizeSchoolAcronym, validSchoolAcronym } from '../shared/transfer.js';
+import { nextRetakeTerm, retakeLabel } from '../shared/retakes.js';
 
 const COOKIE = 'gradeview_session';
 const SESSION_SECONDS = 60 * 60 * 8;
@@ -72,16 +74,32 @@ async function snapshot(db, user) {
   const records = user.role === 'admin'
     ? await db.prepare(`${query} ORDER BY c.sort_order`).all()
     : await db.prepare(`${query} WHERE r.student_no=? ORDER BY c.sort_order`).bind(user.student_no).all();
+  const attempts = user.role === 'admin'
+    ? await db.prepare('SELECT * FROM course_attempts ORDER BY attempt_no').all()
+    : await db.prepare('SELECT * FROM course_attempts WHERE student_no=? ORDER BY attempt_no').bind(user.student_no).all();
+  const histories = new Map();
+  for (const attempt of attempts.results) {
+    const key = `${attempt.student_no}\0${attempt.course_code}`;
+    if (!histories.has(key)) histories.set(key, []);
+    histories.get(key).push({ attemptNumber: attempt.attempt_no, grade: attempt.grade, status: attempt.status,
+      instructor: attempt.instructor, academicYearTaken: attempt.academic_year_taken, semesterTaken: attempt.semester_taken, transferSchool: attempt.transfer_school });
+  }
   const yearLabels = { 1: 'First year', 2: 'Second year', 3: 'Third year', 4: 'Fourth year' };
   const terms = { 1: '1st semester', 2: '2nd semester', summer: 'Summer' };
   const profiles = students.results.map(student => ({
     id: student.student_no, name: student.name, year: student.year_level, program: student.program, email: student.email, studentStatus: student.status,
     firstName: student.first_name, middleName: student.middle_name, lastName: student.last_name,
+    isTransferee: Boolean(student.is_transferee), previousSchool: student.previous_school,
     courses: records.results.filter(record => record.student_no === student.student_no).map(record => ({
       code: record.course_code, title: record.title, units: record.units, year: record.year_level, semester: record.semester,
       prerequisite: record.prerequisite, sourceRequirementColumn: record.source_requirement_column,
       instructor: record.instructor, grade: record.grade, status: record.status,
       academicYearTaken: record.academic_year_taken, semesterTaken: record.semester_taken,
+      transferSchool: record.transfer_school,
+      ...(record.attempt_no > 1 ? { attemptNumber: record.attempt_no } : {}),
+      ...(record.version ? { recordVersion: record.version } : {}),
+      ...(record.status === 'Failed' ? { retake: nextRetakeTerm(record.academic_year_taken, record.semester_taken) } : {}),
+      ...(histories.has(`${student.student_no}\0${record.course_code}`) ? { pastAttempts: histories.get(`${student.student_no}\0${record.course_code}`) } : {}),
       category: `${yearLabels[record.year_level]} · ${terms[record.semester]}`,
     })),
   }));
@@ -222,7 +240,7 @@ async function api(request, env) {
     const passwordHash = await hashPassword(last,12);
     try {
       await db.batch([
-        db.prepare('INSERT INTO students(student_no,name,year_level,email,first_name,middle_name,last_name,status) VALUES(?,?,?,?,?,?,?,?)').bind(studentNo,name,input.year,input.email.trim(),first,middle,last,input.studentStatus),
+        db.prepare('INSERT INTO students(student_no,name,year_level,email,first_name,middle_name,last_name,status,is_transferee,previous_school) VALUES(?,?,?,?,?,?,?,?,?,?)').bind(studentNo,name,input.year,input.email.trim(),first,middle,last,input.studentStatus,input.isTransferee ? 1 : 0,input.isTransferee ? normalizeSchoolAcronym(input.previousSchool) : ''),
         db.prepare('INSERT INTO accounts(id,identifier,role,password_hash,student_no,must_change_password) VALUES(?,?,\'student\',?,?,1)').bind(crypto.randomUUID(),studentNo.toLowerCase(),passwordHash,studentNo),
         db.prepare('INSERT INTO progress_records(student_no,course_code) SELECT ?,code FROM courses').bind(studentNo),
         db.prepare('INSERT INTO admin_events(id,actor_id,action,title,detail) VALUES(?,?,?,?,?)').bind(crypto.randomUUID(),user.id,'student.created',`Student added: ${name}`,`${studentNo} · Year ${input.year} · ${input.studentStatus}`),
@@ -240,11 +258,15 @@ async function api(request, env) {
     const input = await body(request);
     const error = validateStudent(input,true);
     if (error) return json({ error },400);
-    const student = await db.prepare('SELECT name FROM students WHERE student_no=?').bind(studentNo).first();
+    const student = await db.prepare('SELECT name,is_transferee,previous_school FROM students WHERE student_no=?').bind(studentNo).first();
     if (!student) return json({ error: 'Student not found.' },404);
+    const isTransferee = input.isTransferee ?? Boolean(student.is_transferee);
+    const previousSchool = input.previousSchool === undefined ? student.previous_school : normalizeSchoolAcronym(input.previousSchool);
+    if (isTransferee && !validSchoolAcronym(previousSchool)) return json({ error: 'Enter the transferee’s previous school acronym.' }, 400);
+    if (!isTransferee && student.is_transferee && await db.prepare("SELECT 1 FROM progress_records WHERE student_no=? AND transfer_school<>'' LIMIT 1").bind(studentNo).first()) return json({ error: 'This student has transferred grades. Remove their transferred-school entries before changing the student type.' }, 409);
     await db.batch([
-      db.prepare('UPDATE students SET year_level=?,status=?,email=? WHERE student_no=?').bind(input.year,input.studentStatus,input.email.trim(),studentNo),
-      db.prepare('INSERT INTO admin_events(id,actor_id,action,title,detail) VALUES(?,?,?,?,?)').bind(crypto.randomUUID(),user.id,'student.updated',`Student updated: ${student.name}`,`Year ${input.year} · ${input.studentStatus}`),
+      db.prepare('UPDATE students SET year_level=?,status=?,email=?,is_transferee=?,previous_school=? WHERE student_no=?').bind(input.year,input.studentStatus,input.email.trim(),isTransferee ? 1 : 0,isTransferee ? previousSchool : '',studentNo),
+      db.prepare('INSERT INTO admin_events(id,actor_id,action,title,detail) VALUES(?,?,?,?,?)').bind(crypto.randomUUID(),user.id,'student.updated',`Student updated: ${student.name}`,`Year ${input.year} · ${input.studentStatus} · ${isTransferee ? `Transferee from ${previousSchool}` : 'Regular student'}`),
     ]);
     return json(await snapshot(db,user));
   }
@@ -264,6 +286,27 @@ async function api(request, env) {
     if (result[0].meta.changes !== 1) return json({ error: 'Another administrator changed the term. Refresh before continuing.' },409);
     return json(await snapshot(db,user));
   }
+  const retakeMatch = url.pathname.match(/^\/api\/students\/([^/]+)\/records\/([^/]+)\/retake$/);
+  if (retakeMatch && request.method === 'POST') {
+    if (user.role !== 'admin') return json({ error: 'Administrator access is required.' }, 403);
+    const studentNo = decodeURIComponent(retakeMatch[1]);
+    const code = decodeURIComponent(retakeMatch[2]);
+    const input = await body(request);
+    const record = await db.prepare('SELECT * FROM progress_records WHERE student_no=? AND course_code=?').bind(studentNo, code).first();
+    if (!record) return json({ error: 'Student course record not found.' }, 404);
+    if (record.status !== 'Failed') return json({ error: 'Only a failed course can start a retake.' }, 409);
+    if (input.expectedAttemptNumber !== record.attempt_no || input.expectedRecordVersion !== record.version) return json({ error: 'This course changed. Refresh before starting its retake.' }, 409);
+    const next = nextRetakeTerm(record.academic_year_taken, record.semester_taken);
+    if (!next) return json({ error: 'Save the failed attempt’s school year and semester before starting a retake.' }, 400);
+    const operationId = crypto.randomUUID();
+    const result = await db.batch([
+      db.prepare("UPDATE progress_records SET attempt_no=attempt_no+1,grade=NULL,status='In progress',instructor='Unassigned',academic_year_taken=?,semester_taken=?,transfer_school='',version=version+1,operation_id=?,updated_at=CURRENT_TIMESTAMP WHERE student_no=? AND course_code=? AND version=? AND status='Failed'").bind(next.schoolYear, next.semester, operationId, studentNo, code, record.version),
+      db.prepare('INSERT INTO course_attempts(student_no,course_code,attempt_no,grade,status,instructor,academic_year_taken,semester_taken,transfer_school,archived_by) SELECT ?,?,?,?,?,?,?,?,?,? FROM progress_records WHERE student_no=? AND course_code=? AND operation_id=?').bind(studentNo, code, record.attempt_no, record.grade, record.status, record.instructor, record.academic_year_taken, record.semester_taken, record.transfer_school, user.id, studentNo, code, operationId),
+      db.prepare('INSERT INTO admin_events(id,actor_id,action,title,detail) SELECT ?,?,?,?,? FROM progress_records WHERE student_no=? AND course_code=? AND operation_id=?').bind(operationId, user.id, 'course.retake_started', `Retake started: ${code}`, `${studentNo} · Attempt ${record.attempt_no + 1} · ${retakeLabel(next)}. Previous failed grade retained.`, studentNo, code, operationId),
+    ]);
+    if (result[0].meta.changes !== 1) return json({ error: 'This course changed. Refresh before starting its retake.' }, 409);
+    return json(await snapshot(db, user));
+  }
   const match = url.pathname.match(/^\/api\/students\/([^/]+)\/records\/([^/]+)$/);
   if (match && request.method === 'PATCH') {
     if (user.role !== 'admin') return json({ error: 'Administrator access is required.' }, 403);
@@ -272,8 +315,14 @@ async function api(request, env) {
     const input = await body(request);
     const error = validateUpdate(input);
     if (error) return json({ error }, 400);
-    const record = await db.prepare('SELECT * FROM progress_records WHERE student_no=? AND course_code=?').bind(studentNo, code).first();
+    const record = await db.prepare('SELECT r.*,s.is_transferee FROM progress_records r JOIN students s ON s.student_no=r.student_no WHERE r.student_no=? AND r.course_code=?').bind(studentNo, code).first();
     if (!record) return json({ error: 'Student course record not found.' }, 404);
+    if ((input.expectedAttemptNumber !== undefined && input.expectedAttemptNumber !== record.attempt_no) ||
+        (record.attempt_no > 1 && input.expectedAttemptNumber !== record.attempt_no) ||
+        (input.expectedRecordVersion !== undefined && input.expectedRecordVersion !== record.version)) return json({ error: 'This course changed. Reload its saved values before editing.' }, 409);
+    if (input.transferSchool !== undefined && typeof input.transferSchool !== 'string') return json({ error: 'Enter a valid school acronym.' }, 400);
+    const transferSchool = input.transferSchool === undefined ? record.transfer_school : normalizeSchoolAcronym(input.transferSchool);
+    if (transferSchool && (!validSchoolAcronym(transferSchool) || !record.is_transferee || input.grade === null || !['Passed', 'Failed'].includes(input.status))) return json({ error: 'Transferred grades need a transferee student, a final grade, and a school acronym of up to 30 characters.' }, 400);
     let instructor = input.instructor.trim() || 'Unassigned';
     if (instructorKey(instructor) === 'unassigned') instructor = 'Unassigned';
     else {
@@ -285,10 +334,13 @@ async function api(request, env) {
     const yearTaken = input.status === 'Not taken' ? '' : input.academicYearTaken ?? (record.academic_year_taken || academicYearLabel(term));
     const semesterTaken = input.status === 'Not taken' ? '' : input.semesterTaken ?? (record.semester_taken || term.semester);
     if (input.status !== 'Not taken' && (!/^\d{4}[–-]\d{4}$/.test(yearTaken) || Number(yearTaken.slice(5)) !== Number(yearTaken.slice(0,4)) + 1 || !['1','2','summer'].includes(semesterTaken))) return json({ error: 'Choose a valid school year and semester for this record.' },400);
-    await db.batch([
-      db.prepare('UPDATE progress_records SET grade=?,status=?,instructor=?,academic_year_taken=?,semester_taken=?,updated_at=CURRENT_TIMESTAMP WHERE student_no=? AND course_code=?').bind(input.grade, input.status, instructor,yearTaken,semesterTaken,studentNo, code),
-      db.prepare('INSERT INTO record_audit(id,actor_id,student_no,course_code,grade,status,instructor,academic_year_taken,semester_taken) VALUES(?,?,?,?,?,?,?,?,?)').bind(crypto.randomUUID(), user.id, studentNo, code, input.grade, input.status, instructor,yearTaken,semesterTaken),
+    if (record.attempt_no > 1 && (yearTaken !== record.academic_year_taken || semesterTaken !== record.semester_taken)) return json({ error: 'A retake must stay in the school year after the failed attempt, in the same semester.' }, 400);
+    const operationId = crypto.randomUUID();
+    const result = await db.batch([
+      db.prepare('UPDATE progress_records SET grade=?,status=?,instructor=?,academic_year_taken=?,semester_taken=?,transfer_school=?,version=version+1,operation_id=?,updated_at=CURRENT_TIMESTAMP WHERE student_no=? AND course_code=? AND version=?').bind(input.grade, input.status, instructor,yearTaken,semesterTaken,transferSchool,operationId,studentNo, code,record.version),
+      db.prepare('INSERT INTO record_audit(id,actor_id,student_no,course_code,grade,status,instructor,academic_year_taken,semester_taken,transfer_school,attempt_no) SELECT ?,?,?,?,?,?,?,?,?,?,? FROM progress_records WHERE student_no=? AND course_code=? AND operation_id=?').bind(operationId, user.id, studentNo, code, input.grade, input.status, instructor,yearTaken,semesterTaken,transferSchool,record.attempt_no,studentNo,code,operationId),
     ]);
+    if (result[0].meta.changes !== 1) return json({ error: 'This course changed while saving. Reload its saved values and try again.' }, 409);
     return json(await snapshot(db, user));
   }
   return json({ error: 'API endpoint not found.' }, 404);

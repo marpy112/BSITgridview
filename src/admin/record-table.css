@@ -18,6 +18,20 @@
 .record-entry-table thead th:nth-child(6){width:12%}
 .record-entry-table thead th:nth-child(7){width:12%}
 .record-entry-table thead th:last-child{width:8%}
+.record-entry-table.transfer-record-table{min-width:1320px}
+.transfer-record-table thead th:first-child{width:20%}
+.transfer-record-table thead th:nth-child(2){width:4%}
+.transfer-record-table thead th:nth-child(3){width:14%}
+.transfer-record-table thead th:nth-child(4){width:8%}
+.transfer-record-table thead th:nth-child(5){width:16%}
+.transfer-record-table thead th:nth-child(6){width:12%}
+.transfer-record-table thead th:nth-child(7){width:10%}
+.transfer-record-table thead th:nth-child(8){width:10%}
+.transfer-record-table thead th:last-child{width:6%}
+.transfer-entry-help{font-size:11px;line-height:1.8;color:var(--muted);padding:0 20px 15px;margin:0}
+.transfer-origin-toggle{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--muted);margin-bottom:7px;cursor:pointer}
+.record-entry-table .transfer-origin-toggle input{width:14px;min-height:0;height:14px;padding:0;margin:0;accent-color:var(--blue)}
+.record-entry-table .transfer-school-input{font-weight:600;letter-spacing:.2px}
 .record-entry-table tbody td,.record-entry-table tbody th{height:88px;padding:13px 12px;border:0;border-bottom:1px solid var(--line);background:var(--panel);vertical-align:middle}
 .record-entry-table tbody tr:last-child>td,.record-entry-table tbody tr:last-child>th{border-bottom:0}
 .record-entry-table tbody .record-course{position:sticky;left:0;z-index:1;padding-left:18px;text-transform:none;letter-spacing:normal;font-weight:400;box-shadow:1px 0 0 var(--line);text-align:left}

@@ -113,6 +113,10 @@ export default function PortalApp() {
     applySnapshot(await apiRequest(`/api/students/${encodeURIComponent(studentId)}/records/${encodeURIComponent(code)}`, { method: 'PATCH', body: JSON.stringify(updates) }));
   }
 
+  async function startRetake(studentId, code, input) {
+    applySnapshot(await apiRequest('/api/students/' + encodeURIComponent(studentId) + '/records/' + encodeURIComponent(code) + '/retake', { method: 'POST', body: JSON.stringify(input) }));
+  }
+
   async function createStudent(input) {
     const data = await apiRequest('/api/students',{method:'POST',body:JSON.stringify(input)});
     applySnapshot(data);
@@ -149,7 +153,7 @@ export default function PortalApp() {
   if (role === 'student' && mustChangePassword) return <ChangePasswordPage onSave={changePassword} onLogout={logout} />;
   if (role === 'student' && !students[0]) return <div className="database-loading"><p role="alert">Your student profile could not be loaded. Please contact your administrator.</p><button className="primary-button" onClick={logout}>Sign out</button></div>;
   if (route.startsWith('/admin') && role === 'admin' && route !== '/admin/login') {
-    return <AdminDashboard students={students} activity={activity} instructors={instructors} onCreateInstructor={createInstructor} onResetStudentPassword={resetStudentPassword} academicTerm={academicTerm} onCreateStudent={createStudent} onUpdateStudent={updateStudent} onUpdateAcademicTerm={updateAcademicTerm} onUpdateRecord={updateRecord} onLogout={logout} />;
+    return <AdminDashboard students={students} activity={activity} instructors={instructors} onCreateInstructor={createInstructor} onResetStudentPassword={resetStudentPassword} academicTerm={academicTerm} onCreateStudent={createStudent} onUpdateStudent={updateStudent} onUpdateAcademicTerm={updateAcademicTerm} onUpdateRecord={updateRecord} onStartRetake={startRetake} onLogout={logout} />;
   }
   if (route.startsWith('/student') && role === 'student' && route !== '/student/login') {
     return <StudentPortal currentCourses={students[0]?.courses || []} student={students[0]} academicTerm={academicTerm} onLogout={logout} />;

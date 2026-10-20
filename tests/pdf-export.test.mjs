@@ -12,7 +12,7 @@ test('PDF exports preserve records, accented names, table headers, metadata, and
     const { createPdf, courseHeaders, courseExportRows, downloadPdf } = await server.ssrLoadModule('/src/export.js');
     const { courses } = await server.ssrLoadModule('/src/data.js');
     const term = courses.filter(course => course.year === 2 && course.semester === '2');
-    const rows = courseExportRows(term.map((course, index) => index === 0 ? { ...course, instructor: 'Instructor Peña', grade: 1.5, status: 'Passed' } : course));
+    const rows = courseExportRows(term.map((course, index) => index === 0 ? { ...course, instructor: 'Instructor Peña', grade: 1.5, status: 'Passed', transferSchool: 'PUP', attemptNumber: 2, pastAttempts: [{ attemptNumber: 1, grade: 5, status: 'Failed', academicYearTaken: '2025-2026', semesterTaken: '2', instructor: 'Test', transferSchool: 'TUP' }] } : course));
     assert.equal(rows.length, 10);
     const report = await createPdf(courseHeaders, rows, { title: 'Student progress record', metadata: ['Student: Test BEÑAS | Student ID: TEST-001', 'Second year | 2nd semester | Status: All'] });
     const bytes = new Uint8Array(report.output('arraybuffer'));
@@ -22,7 +22,7 @@ test('PDF exports preserve records, accented names, table headers, metadata, and
     const firstPage = await pdf.getPage(1);
     assert(firstPage.view[2] > firstPage.view[3], 'wide tables use landscape');
     const text = (await firstPage.getTextContent()).items.map(item => item.str).join(' ');
-    for (const expected of ['BSIT gradeview','Student progress record','BEÑAS','Peña','1.50','Pending','Information Management','TEST-001']) assert(text.includes(expected), expected);
+    for (const expected of ['BSIT gradeview','Student progress record','BEÑAS','Peña','1.50','PUP','TUP','Attempt 1:','5.00','Transferred school','Pending','Information Management','TEST-001']) assert(text.includes(expected), expected);
     assert(!text.includes('Capstone Project and Research 2'), 'only the selected term is exported');
     await loading.destroy();
 

@@ -51,7 +51,7 @@ try{
     console.log('Testing the Vercel API through the protected Cloudflare database gateway.');
   }
   console.log('Running tests against an isolated local database; existing school records are untouched.');
-  const files = process.argv.includes('--all') ? ['tests/database.test.mjs','tests/onboarding.test.mjs','tests/admin-management.test.mjs','tests/admin-tools.test.mjs','tests/production.test.mjs','tests/pdf-export.test.mjs'] : ['tests/admin-management.test.mjs','tests/admin-tools.test.mjs'];
+  const files = process.argv.includes('--all') ? ['tests/database.test.mjs','tests/onboarding.test.mjs','tests/admin-management.test.mjs','tests/admin-tools.test.mjs','tests/transfer-students.test.mjs','tests/retakes.test.mjs','tests/production.test.mjs','tests/pdf-export.test.mjs'] : ['tests/admin-management.test.mjs','tests/admin-tools.test.mjs','tests/transfer-students.test.mjs','tests/retakes.test.mjs'];
   if(free)files.push('tests/gateway-integration.test.mjs');
   const result=spawnSync(process.execPath,['--test','--test-concurrency=1',...files],{env:{...env,GRADEVIEW_TEST_URL:testBase,...(free?{GRADEVIEW_GATEWAY_URL:base,GRADEVIEW_DATABASE_SECRET:databaseSecret}:{})},stdio:'inherit'});
   process.exitCode=result.status??1;
