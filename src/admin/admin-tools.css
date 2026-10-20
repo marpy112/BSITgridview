@@ -1,0 +1,16 @@
+.admin-tool-description{font-size:12px;color:var(--muted);line-height:1.8}
+.instructor-search{margin:22px 0 10px;max-width:420px}
+.instructor-list-row{display:flex;align-items:center;gap:13px;padding:17px 0;border-bottom:1px solid var(--line)}
+.instructor-list-row>strong{font-size:13px;color:var(--text);overflow-wrap:anywhere;min-width:0}
+.instructor-list-row>span:last-child{margin-left:auto;color:var(--muted);font-size:11px;white-space:nowrap}
+.instructor-list .empty>strong{font-size:14px;color:var(--text)}
+.instructor-list .empty>p{font-size:12px;line-height:1.8}
+.password-reset-summary{display:grid;gap:9px;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:18px;margin:20px 0}
+.password-reset-summary>strong{font-size:14px;line-height:1.6}
+.password-reset-summary>span{font-size:11px;color:var(--muted)}
+.password-reset-summary>span:nth-of-type(2){margin-top:9px}
+.password-reset-summary>code{font-size:15px;font-weight:600;color:var(--text);white-space:pre-wrap;overflow-wrap:anywhere}
+.admin-action-notice{margin:18px 0 0;padding:12px 15px;border:1px solid #cfe7dc;background:#eef8f2;color:#39725c;font-size:12px;line-height:1.7;border-radius:8px}
+.record-sheet-heading-actions{display:flex;align-items:center;justify-content:flex-end;gap:16px;flex-wrap:wrap}
+.record-sheet-heading-actions>button{font-size:11px;min-height:37px;white-space:nowrap}
+@media(max-width:700px){.record-sheet-heading{align-items:flex-start;flex-direction:column;gap:12px}.record-sheet-heading-actions{justify-content:flex-start}.instructor-list-row{flex-wrap:wrap}.instructor-list-row>strong{flex:1}.instructor-list-row>span:last-child{width:100%;margin-left:48px}.instructor-directory>.admin-section-heading>.primary-button{width:100%}}

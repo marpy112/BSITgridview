@@ -21,7 +21,8 @@ export async function createFixture() {
   const adminEmail=`integration-${tag}@example.test`;
   const password=crypto.randomUUID();
   const passwordHash=await hash(password,12);
-  executeLocal(`INSERT INTO students(student_no,name,year_level) VALUES('${studentId}','API INTEGRATION TEST',2);
+  executeLocal(`INSERT OR IGNORE INTO instructors(id,name,name_key) VALUES('fixture-test-instructor','Test Instructor','test instructor'),('fixture-database-instructor','Database Test Instructor','database test instructor');
+    INSERT INTO students(student_no,name,year_level) VALUES('${studentId}','API INTEGRATION TEST',2);
     INSERT INTO progress_records(student_no,course_code) SELECT '${studentId}',code FROM courses;
     INSERT INTO accounts(id,identifier,role,password_hash) VALUES('${adminId}','${adminEmail}','admin','${passwordHash}');
     INSERT INTO accounts(id,identifier,role,password_hash,student_no) VALUES('${studentAccountId}','${studentId}','student','${passwordHash}','${studentId}');`);

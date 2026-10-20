@@ -71,6 +71,7 @@ The migrations create:
 | `sessions` | Hashed session tokens with eight-hour expiry |
 | `record_audit` | Saved grade updates and the administrator responsible |
 | `login_attempts` | Limits repeated sign-in attempts |
+| `instructors` | Saved instructor names for the administrator's course dropdown |
 
 Schema/curriculum migrations do not create sample accounts. Import students separately from the private master list. Each newly provisioned student is assigned the 68-course curriculum with blank grades, `Not taken` status, and unassigned instructors.
 
@@ -92,7 +93,7 @@ Choose `admin`, enter your email, and enter a unique password when prompted. The
 
 Run the same command again and choose `student`. Enter the student's number/iLearn number, first/middle/last name, year level, and optional email. The initial username is the student number and the initial password is the exact last name. Students must replace it on their first login. See [STUDENT_IMPORT.md](STUDENT_IMPORT.md) for the supplied master-list import.
 
-You can use `--local` instead of `--remote` to create local test accounts. Account creation is insert-only: repeating an existing identifier does not reset its password. Required first-login password replacement is implemented. Password recovery, later voluntary password changes, self-registration, and account-management screens are not implemented yet.
+You can use `--local` instead of `--remote` to create local test accounts. Account creation is insert-only: repeating an existing identifier does not reset its password. Required first-login password replacement is implemented. Administrators can reset a student's password to their exact saved last name from the student's record; see [ADMIN_MANAGEMENT.md](ADMIN_MANAGEMENT.md). Self-service password recovery, later voluntary password changes, and self-registration are not implemented yet.
 
 ## 6. Deploy the website and API together
 

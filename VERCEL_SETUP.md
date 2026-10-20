@@ -2,6 +2,10 @@
 
 Frontend and Node API: https://bsitgridview.vercel.app
 
+Administrator login: https://bsitgridview-git-main-makis-projects-c74e13c6.vercel.app/login/
+
+`/login/` (also `/login`) opens the administrator form. The student login page does not advertise this link. The canonical production host also supports `/login/`, and existing `#/admin/login` bookmarks still work. The Vercel API permits same-origin writes from the exact production branch alias above; other preview origins remain denied. Vercel deployment protection, if enabled on the branch alias, is managed in Vercel separately from application sign-in.
+
 Database gateway: https://bsit-gradeview.bsitibagridview.workers.dev
 
 The Vercel Node function `api/[...path].js` runs the existing API, including bcrypt cost 12. The Free Cloudflare Worker only executes database queries using the existing D1 binding. Accounts, password hashes, grades, sessions, origin checks, and atomic database writes are preserved. No database recreation, student import, password reset, or paid CPU setting is needed.
@@ -47,6 +51,8 @@ Keep Framework **Vite**, build command **npm run build**, output directory **dis
 Commit and push the implementation to `main` (or deploy it with the Vercel CLI), then wait for the production deployment. If you add or change environment variables after a deployment, redeploy so the function receives them. Setting variables alone does not update an existing deployment.
 
 ## 3. Verify
+
+When updating to the instructor-directory and student-reset features, first back up D1 and run `npm.cmd run db:migrate:remote` to apply `0007_instructors.sql`, then deploy the updated application to Vercel. The existing database gateway needs no redeployment. Do not push the updated API before applying its database migration.
 
 ```powershell
 npm.cmd run production:smoke -- https://bsitgridview.vercel.app

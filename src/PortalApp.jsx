@@ -9,7 +9,8 @@ import { apiRequest } from './api.js';
 import { defaultAcademicTerm } from '../shared/academic.js';
 
 function initialRoute() {
-  return typeof window === 'undefined' ? '/student/login' : window.location.hash.slice(1) || '/student/login';
+  if (typeof window === 'undefined') return '/student/login';
+  return window.location.hash.slice(1) || (/^\/login\/?$/.test(window.location.pathname) ? '/admin/login' : '/student/login');
 }
 
 export default function PortalApp() {
@@ -17,6 +18,7 @@ export default function PortalApp() {
   const [role, setRole] = useState(null);
   const [students, setStudents] = useState([]);
   const [activity, setActivity] = useState([]);
+  const [instructors, setInstructors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [connectionError, setConnectionError] = useState('');
   const [mustChangePassword, setMustChangePassword] = useState(false);
@@ -26,6 +28,7 @@ export default function PortalApp() {
     setRole(data.role);
     setStudents(data.students);
     setActivity(data.activity);
+    setInstructors(data.instructors || []);
     setMustChangePassword(Boolean(data.mustChangePassword));
     if (data.academicTerm) setAcademicTerm(data.academicTerm);
   }
@@ -44,7 +47,8 @@ export default function PortalApp() {
   useEffect(() => {
     const sync = () => setRoute(initialRoute());
     window.addEventListener('hashchange', sync);
-    return () => window.removeEventListener('hashchange', sync);
+    window.addEventListener('popstate', sync);
+    return () => { window.removeEventListener('hashchange', sync); window.removeEventListener('popstate', sync); };
   }, []);
 
   useEffect(() => {
@@ -57,7 +61,7 @@ export default function PortalApp() {
         if (active) applySnapshot(data);
       } catch(error) {
         if (active && error.status === 401) {
-          setRole(null); setStudents([]); setActivity([]);
+          setRole(null); setStudents([]); setActivity([]); setInstructors([]);
           navigate(role === 'admin' ? '/admin/login' : '/student/login');
         }
       }
@@ -74,7 +78,8 @@ export default function PortalApp() {
   }, [route, role]);
 
   function navigate(path) {
-    window.location.hash = path;
+    if (path === '/admin/login') window.history.pushState(null, '', '/login/');
+    else window.location.hash = path;
     setRoute(path);
     window.scrollTo({ top: 0 });
   }
@@ -94,6 +99,7 @@ export default function PortalApp() {
     setMustChangePassword(false);
     setStudents([]);
     setActivity([]);
+    setInstructors([]);
     document.body.classList.remove('dark');
     navigate(previousRole === 'admin' ? '/admin/login' : '/student/login');
   }
@@ -117,6 +123,18 @@ export default function PortalApp() {
     applySnapshot(await apiRequest(`/api/students/${encodeURIComponent(id)}`,{method:'PATCH',body:JSON.stringify(input)}));
   }
 
+  async function createInstructor(input) {
+    const data = await apiRequest('/api/instructors', { method: 'POST', body: JSON.stringify(input) });
+    applySnapshot(data);
+    return data.createdInstructorId;
+  }
+
+  async function resetStudentPassword(id) {
+    applySnapshot(await apiRequest('/api/students/' + encodeURIComponent(id) + '/reset-password', {
+      method: 'POST', body: JSON.stringify({ confirmStudentId: id }),
+    }));
+  }
+
   async function updateAcademicTerm(input,mode) {
     try {
       applySnapshot(await apiRequest('/api/academic-term',{method:mode==='advance'?'POST':'PATCH',body:JSON.stringify(input)}));
@@ -131,7 +149,7 @@ export default function PortalApp() {
   if (role === 'student' && mustChangePassword) return <ChangePasswordPage onSave={changePassword} onLogout={logout} />;
   if (role === 'student' && !students[0]) return <div className="database-loading"><p role="alert">Your student profile could not be loaded. Please contact your administrator.</p><button className="primary-button" onClick={logout}>Sign out</button></div>;
   if (route.startsWith('/admin') && role === 'admin' && route !== '/admin/login') {
-    return <AdminDashboard students={students} activity={activity} academicTerm={academicTerm} onCreateStudent={createStudent} onUpdateStudent={updateStudent} onUpdateAcademicTerm={updateAcademicTerm} onUpdateRecord={updateRecord} onLogout={logout} />;
+    return <AdminDashboard students={students} activity={activity} instructors={instructors} onCreateInstructor={createInstructor} onResetStudentPassword={resetStudentPassword} academicTerm={academicTerm} onCreateStudent={createStudent} onUpdateStudent={updateStudent} onUpdateAcademicTerm={updateAcademicTerm} onUpdateRecord={updateRecord} onLogout={logout} />;
   }
   if (route.startsWith('/student') && role === 'student' && route !== '/student/login') {
     return <StudentPortal currentCourses={students[0]?.courses || []} student={students[0]} academicTerm={academicTerm} onLogout={logout} />;

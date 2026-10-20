@@ -1,0 +1,62 @@
+.record-sheet{margin-top:20px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--panel)}
+.record-sheet-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:19px 20px}
+.record-sheet-heading h3{margin:0;font-size:14px;letter-spacing:-.2px}
+.record-sheet-heading h3>span{margin-left:9px;font:500 10px 'DM Sans',sans-serif;color:var(--muted);background:var(--bg);border:1px solid var(--line);border-radius:5px;padding:3px 6px;white-space:nowrap}
+.record-sheet-heading p{font-size:11px;line-height:1.7;color:var(--muted);margin:7px 0 0}
+.record-sheet-scale{font-size:10px;color:var(--muted);white-space:nowrap}
+.record-sheet-scale>span{padding:0 5px}
+.record-sheet-mobile-hint{display:none}
+.record-sheet-scroll{overflow:auto;max-height:650px;scrollbar-gutter:stable;overscroll-behavior-x:contain;border-top:1px solid var(--line)}
+.record-sheet-scroll:focus-visible{outline:2px solid var(--blue);outline-offset:-2px}
+.record-entry-table{width:100%;min-width:1100px;table-layout:fixed;border-collapse:separate;border-spacing:0;white-space:normal}
+.record-entry-table thead th{position:sticky;top:0;z-index:2;height:43px;background:#f5f7fc;border-bottom:1px solid var(--line);padding:10px 12px;font:600 10px 'DM Sans',sans-serif;letter-spacing:.3px;color:#74839d;text-transform:uppercase;text-align:left}
+.record-entry-table thead th:first-child{width:23%;padding-left:18px;left:0;z-index:3}
+.record-entry-table thead th:nth-child(2){width:5%}
+.record-entry-table thead th:nth-child(3){width:17%}
+.record-entry-table thead th:nth-child(4){width:9%}
+.record-entry-table thead th:nth-child(5){width:14%}
+.record-entry-table thead th:nth-child(6){width:12%}
+.record-entry-table thead th:nth-child(7){width:12%}
+.record-entry-table thead th:last-child{width:8%}
+.record-entry-table tbody td,.record-entry-table tbody th{height:88px;padding:13px 12px;border:0;border-bottom:1px solid var(--line);background:var(--panel);vertical-align:middle}
+.record-entry-table tbody tr:last-child>td,.record-entry-table tbody tr:last-child>th{border-bottom:0}
+.record-entry-table tbody .record-course{position:sticky;left:0;z-index:1;padding-left:18px;text-transform:none;letter-spacing:normal;font-weight:400;box-shadow:1px 0 0 var(--line);text-align:left}
+.record-course>strong{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--blue);letter-spacing:.2px}
+.record-course>span{display:block;font-size:12px;line-height:1.5;color:var(--text);font-weight:500;margin-top:5px;overflow-wrap:anywhere}
+.record-course>small{display:block;font-size:9px;line-height:1.5;letter-spacing:0;color:var(--muted);margin-top:5px}
+.record-dirty-dot{width:6px;height:6px;border-radius:50%;background:#d69b31;flex-shrink:0}
+.record-entry-table .record-units{text-align:center;color:var(--muted);font-size:11px}
+.record-entry-table input,.record-entry-table select{width:100%;min-height:40px;border:1px solid #dfe6f1;border-radius:7px;background:var(--panel);padding:9px 10px;color:var(--text);font:400 12px 'DM Sans',sans-serif;line-height:1.4}
+.record-entry-table input::placeholder{color:#9aa6ba}
+.record-entry-table input:focus-visible,.record-entry-table select:focus-visible{border-color:var(--blue);outline:2px solid #315be82b;outline-offset:1px}
+.record-entry-table input:disabled,.record-entry-table select:disabled{background:var(--bg);color:var(--muted);opacity:.75;cursor:default}
+.record-entry-table input.record-grade-input{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;text-align:center;padding:8px 4px}
+.record-entry-table .record-grade-input::-webkit-inner-spin-button,.record-entry-table .record-grade-input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.record-entry-table .record-grade-input{appearance:textfield;-moz-appearance:textfield}
+.record-entry-table .record-status-select{font-size:11px;font-weight:500;padding-left:8px}
+.record-entry-table .record-status-select.passed{background:#edf8f2;color:#34745b;border-color:#d1e9dc}
+.record-entry-table .record-status-select.failed{background:#fff0f2;color:#ad4259;border-color:#f0d4dc}
+.record-entry-table .record-status-select.in-progress{background:#eef3ff;color:#4d6fae;border-color:#dbe5fa}
+.record-entry-table .record-status-select.incomplete{background:#fff6e6;color:#976e25;border-color:#f0e0bd}
+.record-year-end{display:block;margin-top:5px;color:var(--muted);font-size:9px;text-align:center;line-height:1.4;font-variant-numeric:tabular-nums}
+.record-entry-table .record-save-cell{padding-left:4px;padding-right:12px;text-align:right}
+.record-save-cell button{width:100%;min-height:36px;font-size:10px;padding:8px 5px;white-space:nowrap}
+.record-entry-table .record-row-dirty>td,.record-entry-table .record-row-dirty>th{background:#fffcf4}
+.record-entry-table .record-row-error>td,.record-entry-table .record-row-error>th{background:#fff6f7}
+.record-entry-table .record-error-row>td{height:auto;padding:0 18px 12px;background:#fff6f7}
+.record-error-row p{margin:0;font-size:11px;color:#b24459;line-height:1.6}
+.record-sheet-footer{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:16px 20px;border-top:1px solid var(--line);background:#fafbfe}
+.record-sheet-footer p{margin:0 0 5px;font-size:11px;line-height:1.6;font-weight:600;color:#587b6e}
+.record-sheet-footer p.record-unsaved{color:#8f6a2b}
+.record-sheet-footer>div>span{font-size:10px;line-height:1.6;color:var(--muted)}
+.record-sheet-actions{display:flex;gap:9px;flex-shrink:0}
+.record-sheet-actions button{font-size:11px;min-height:40px}
+.record-scroll-hint{display:none}
+.record-sheet button:disabled{opacity:.5;cursor:default}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+body.dark .record-entry-table thead th,body.dark .record-sheet-footer{background:#22314b}
+body.dark .record-entry-table input,body.dark .record-entry-table select{border-color:var(--line)}
+body.dark .record-entry-table .record-row-dirty>td,body.dark .record-entry-table .record-row-dirty>th{background:#302d26}
+body.dark .record-entry-table .record-row-error>td,body.dark .record-entry-table .record-row-error>th,body.dark .record-entry-table .record-error-row>td{background:#372932}
+@media(max-width:1250px){.record-sheet-scale{display:none}.record-scroll-hint{display:inline}.record-sheet-mobile-hint{display:block;font-size:10px;line-height:1.7;color:var(--muted);margin:0;padding:0 20px 12px}}
+@media(max-width:700px){.record-sheet-heading{padding:16px}.record-sheet-heading p{font-size:11px}.record-sheet-footer{align-items:stretch;flex-direction:column;padding:16px;gap:12px}.record-sheet-actions{justify-content:flex-end}.record-sheet-actions button{flex:1}.record-entry-table tbody .record-course,.record-entry-table thead th:first-child{position:static}.record-entry-table thead th:first-child{position:sticky;left:auto}.record-entry-table input,.record-entry-table select{font-size:16px}.record-entry-table .record-status-select{font-size:14px}.record-entry-table{min-width:1210px}}

@@ -6,6 +6,11 @@ const COOKIE = 'gradeview_session';
 const SESSION_SECONDS = 60 * 60 * 8;
 const json = (data, status = 200, headers = {}) => Response.json(data, { status, headers: { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'X-Frame-Options': 'DENY', 'Referrer-Policy': 'no-referrer', 'Permissions-Policy': 'camera=(), microphone=(), geolocation=()', 'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none'", ...headers } });
 const digest = async value => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value)))].map(byte => byte.toString(16).padStart(2, '0')).join('');
+const instructorKey = name => name.normalize('NFC').replace(/\s+/g, ' ').trim().toLowerCase();
+
+async function listInstructors(db) {
+  return (await db.prepare('SELECT id,name FROM instructors ORDER BY name COLLATE NOCASE').all()).results;
+}
 
 function cookie(request, token, maxAge) {
   const secure = new URL(request.url).protocol === 'https:' ? '; Secure' : '';
@@ -86,7 +91,8 @@ async function snapshot(db, user) {
     ...events.results.map(item => ({ id: item.id, text: item.title, detail: item.detail, createdAt: item.created_at })),
     ...audit.results.map(item => ({ id: item.id, text: `${item.name} · ${item.course_code}`, detail: `Updated to ${item.status}${item.grade !== null ? ` · Grade ${item.grade.toFixed(2)}` : ''}`, createdAt: item.created_at })),
   ].sort((a,b) => b.createdAt.localeCompare(a.createdAt)).slice(0,5);
-  return { role: user.role, mustChangePassword: false, students: profiles, activity, academicTerm: term };
+  return { role: user.role, mustChangePassword: false, students: profiles, activity, academicTerm: term,
+    ...(user.role === 'admin' ? { instructors: await listInstructors(db) } : {}) };
 }
 
 async function readAcademicTerm(db) {
@@ -158,6 +164,49 @@ async function api(request, env) {
     return json(await snapshot(db, { ...user, must_change_password: 0 }), 200, { 'Set-Cookie': cookie(request,token,SESSION_SECONDS) });
   }
   if (user.must_change_password) return json({ error: 'Change your initial password before accessing student records.', code: 'PASSWORD_CHANGE_REQUIRED' }, 403);
+  if (url.pathname === '/api/instructors' && ['GET', 'POST'].includes(request.method)) {
+    if (user.role !== 'admin') return json({ error: 'Administrator access is required.' }, 403);
+    if (request.method === 'GET') return json({ instructors: await listInstructors(db) });
+    const input = await body(request);
+    if (typeof input.name !== 'string' || /[\u0000-\u001f\u007f]/.test(input.name)) return json({ error: 'Enter a valid instructor name.' }, 400);
+    const name = input.name.normalize('NFC').replace(/\s+/g, ' ').trim();
+    if (!name || name.length > 120 || instructorKey(name) === 'unassigned') return json({ error: 'Enter an instructor name of 1–120 characters. Unassigned is reserved.' }, 400);
+    const existing = await listInstructors(db);
+    if (existing.some(item => instructorKey(item.name) === instructorKey(name))) return json({ error: 'That instructor is already in the list.' }, 409);
+    const id = crypto.randomUUID();
+    try {
+      await db.batch([
+        db.prepare('INSERT INTO instructors(id,name,name_key) VALUES(?,?,?)').bind(id, name, instructorKey(name)),
+        db.prepare('INSERT INTO admin_events(id,actor_id,action,title,detail) VALUES(?,?,?,?,?)').bind(crypto.randomUUID(), user.id, 'instructor.created', `Instructor added: ${name}`, 'Available in the course instructor dropdown.'),
+      ]);
+    } catch (error) {
+      if (/unique constraint/i.test(error.message)) return json({ error: 'That instructor is already in the list.' }, 409);
+      throw error;
+    }
+    return json({ ...await snapshot(db, user), createdInstructorId: id }, 201);
+  }
+  const resetMatch = url.pathname.match(/^\/api\/students\/([^/]+)\/reset-password$/);
+  if (resetMatch && request.method === 'POST') {
+    if (user.role !== 'admin') return json({ error: 'Administrator access is required.' }, 403);
+    const studentNo = decodeURIComponent(resetMatch[1]);
+    const input = await body(request);
+    if (input.confirmStudentId !== studentNo) return json({ error: 'Confirm the student ID before resetting their password.' }, 400);
+    const account = await db.prepare("SELECT a.id,a.identifier,a.password_hash,s.name,s.last_name FROM accounts a JOIN students s ON s.student_no=a.student_no WHERE a.role='student' AND s.student_no=?").bind(studentNo).first();
+    if (!account) return json({ error: 'Student login account not found.' }, 404);
+    if (!account.last_name.trim() || new TextEncoder().encode(account.last_name).length > 72) return json({ error: 'The student needs a valid saved last name before their password can be reset.' }, 400);
+    // Hash the saved surname exactly: preserve case, accents, and spaces.
+    const nextHash = await hashPassword(account.last_name, 12);
+    const bucket = Math.floor(Date.now() / 1000 / 900);
+    const keys = await Promise.all([bucket, bucket - 1].map(value => digest(`account:student:${account.identifier}:${value}`)));
+    const result = await db.batch([
+      db.prepare("UPDATE accounts SET password_hash=?,must_change_password=1,password_changed_at=NULL WHERE id=? AND role='student' AND password_hash=?").bind(nextHash, account.id, account.password_hash),
+      db.prepare('DELETE FROM sessions WHERE account_id=? AND EXISTS(SELECT 1 FROM accounts WHERE id=? AND password_hash=?)').bind(account.id, account.id, nextHash),
+      db.prepare('DELETE FROM login_attempts WHERE bucket_key IN (?,?) AND EXISTS(SELECT 1 FROM accounts WHERE id=? AND password_hash=?)').bind(...keys, account.id, nextHash),
+      db.prepare('INSERT INTO admin_events(id,actor_id,action,title,detail) SELECT ?,?,?,?,? FROM accounts WHERE id=? AND password_hash=?').bind(crypto.randomUUID(), user.id, 'student.password_reset', `Student password reset: ${account.name}`, `${studentNo} · Password change required at next sign-in.`, account.id, nextHash),
+    ]);
+    if (result[0].meta.changes !== 1) return json({ error: 'This login changed during the reset. Refresh and try again.' }, 409);
+    return json({ ...await snapshot(db, user), passwordResetStudentId: studentNo });
+  }
   if (url.pathname === '/api/students' && request.method === 'POST') {
     if (user.role !== 'admin') return json({ error: 'Administrator access is required.' }, 403);
     const input = await body(request);
@@ -225,7 +274,13 @@ async function api(request, env) {
     if (error) return json({ error }, 400);
     const record = await db.prepare('SELECT * FROM progress_records WHERE student_no=? AND course_code=?').bind(studentNo, code).first();
     if (!record) return json({ error: 'Student course record not found.' }, 404);
-    const instructor = input.instructor.trim() || 'Unassigned';
+    let instructor = input.instructor.trim() || 'Unassigned';
+    if (instructorKey(instructor) === 'unassigned') instructor = 'Unassigned';
+    else {
+      const registered = await db.prepare('SELECT name FROM instructors WHERE name=?').bind(instructor).first();
+      if (!registered) return json({ error: 'Select a saved instructor, or add the instructor to the list first.' }, 400);
+      instructor = registered.name;
+    }
     const term = await readAcademicTerm(db);
     const yearTaken = input.status === 'Not taken' ? '' : input.academicYearTaken ?? (record.academic_year_taken || academicYearLabel(term));
     const semesterTaken = input.status === 'Not taken' ? '' : input.semesterTaken ?? (record.semester_taken || term.semester);

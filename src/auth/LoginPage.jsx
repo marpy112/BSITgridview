@@ -20,7 +20,7 @@ export default function LoginPage({ role, onLogin }) {
   return (
     <div className={`login-layout ${admin ? 'admin-login-page' : 'student-login-page'}`}>
       <section className="login-story">
-        <a href={admin ? '#/admin/login' : '#/student/login'} className="brand login-brand"><span className="brand-icon">g<span>•</span></span><span className="brand-name"><small>BSIT </small>gradeview</span><span className="brand-dot">.</span></a>
+        <a href={admin ? '/login/' : '/#/student/login'} className="brand login-brand"><span className="brand-icon">g<span>•</span></span><span className="brand-name"><small>BSIT </small>gradeview</span><span className="brand-dot">.</span></a>
         <div className="login-story-content">
           <div className="eyebrow">A CLEARER PATH FORWARD</div>
           <h1>{admin ? <>Support every student.<br />See the bigger picture.</> : <>Your hard work.<br />Your next chapter.</>}</h1>
@@ -45,7 +45,7 @@ export default function LoginPage({ role, onLogin }) {
             <button className="primary-button login-submit" type="submit" disabled={submitting} aria-busy={submitting}>{submitting ? "Signing in..." : `Sign in as ${admin ? 'administrator' : 'student'}`} <span>→</span></button>
           </form>
           <p className="prototype-note">Sign in using the account provided by your academic administrator.</p>
-          <p className="other-login-link">{admin ? 'Looking for your progress record?' : 'Managing academic records?'} <a href={admin ? '#/student/login' : '#/admin/login'}>{admin ? 'Student login' : 'Administrator login'} <span aria-hidden="true">→</span></a></p>
+          {admin && <p className="other-login-link">Looking for your progress record? <a href="/#/student/login">Student login <span aria-hidden="true">→</span></a></p>}
         </div>
         <div className="login-bottom-note">BSIT gradeview. <span>A little progress, every day.</span></div>
       </section>

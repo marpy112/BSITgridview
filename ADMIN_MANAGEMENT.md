@@ -17,17 +17,33 @@ Open **Students → View record → Edit year / student status**. Select first t
 
 Profile changes retain grades, instructor assignments, and the existing password. Student status describes enrollment; inactive and graduated students can still read their own academic records. It does not grant administrator permissions or delete their records.
 
+## Add instructors
+
+Open **Instructors → + Add instructor**, enter their full name, and save. You can also click **+ Add instructor** above the course grade table without leaving the student's record or losing draft grades.
+
+Instructor names are stored independently of course assignments. Select an instructor from each row's dropdown, or choose **Unassigned**. Duplicate names are rejected regardless of case. Existing instructor names are imported into the directory by migration `0007_instructors.sql`; saved assignments are preserved. The API requires a registered instructor for new assignments.
+
+## Reset a student password
+
+Open **Students → View record → Reset password**. Review the student's name, ID, and exact saved last name, then click **Reset to last name**. Cancel closes the dialog without changing the account.
+
+The reset replaces only that student's password with a bcrypt hash of their exact saved last name, preserving case, spaces, and accents. It signs out all their sessions and requires a new password at the next sign-in. Recent account-specific failed-login counts are cleared; IP limits stay in place. Administrator and other students' sessions, grades, profiles, and course assignments are kept. The action is logged with the administrator responsible.
+
+A missing or unsupported saved last name blocks reset. A reset cannot target an administrator account, and students cannot invoke the endpoint. Passwords and password hashes are not returned by the reset API.
+
 The directory supports filtering by these student statuses as well as pending course records. Student status is distinct from a course's Passed/Failed/Incomplete status.
 
 ## Add or edit grades and course status
 
-Open a student's record, select the curriculum year and term, and click **Add grade / status** or **Edit grade / status** on a course.
+Open a student's record and select the curriculum year and term. Edit grades, status, instructor, school year, and term taken directly in the course table.
 
 - Enter a final grade from 1.00 through 5.00. A grade of 3.00 or better is passing.
 - A newly entered grade automatically selects Passed or Failed; the server validates the grade/status combination.
 - Not taken, In progress, and Incomplete records have no final grade.
 - Set the instructor and the actual school year/term taken.
-- Save the record. Changes are stored in D1 and audited.
+- Click **Save** on a row, or **Save all changes** to save every changed row. Tab moves between inputs; Enter in an input saves its row. Changes are stored in D1 and audited.
+
+Drafts remain when switching year/term filters. The change count includes drafts in other terms, and Save all changes includes those rows too. Failed saves keep the entered values for retry. Discard changes restores saved values; leaving a student with unsaved changes prompts before discarding. PDF exports use saved records. On narrow screens, scroll the table horizontally to reach the remaining columns.
 
 Historical records with no attendance year are labeled **Not recorded**. Their year is not inferred during migration. The model retains one result per curriculum course; editing a grade replaces that result. Separate repeated attempts are not modeled.
 
@@ -55,12 +71,17 @@ All these write endpoints require an administrator session and the correct reque
 | `POST /api/students` | Create student, account, and blank course records |
 | `PATCH /api/students/:id` | Edit year level, student status, email |
 | `PATCH /api/students/:id/records/:code` | Edit grade, course status, instructor, year/term taken |
+| `GET /api/instructors` | List saved instructors (administrator only) |
+| `POST /api/instructors` | Add a unique instructor name using `{ name }` |
+| `POST /api/students/:id/reset-password` | Reset to the saved last name using `{ confirmStudentId: id }` |
 | `POST /api/academic-term` | Advance to the next term using `expectedVersion` |
 | `PATCH /api/academic-term` | Set current year/semester using `expectedVersion` |
 
 The session response includes `academicTerm: { schoolYearStart, semester, version }`. New student responses also include `createdStudentId`.
 
 ## Database and deployment
+
+Apply migration `0007_instructors.sql` **before deploying the updated Vercel API**. The migration creates the instructor directory and carries over names already used in records; it does not reset any student passwords. Use the backup and deployment steps in [VERCEL_SETUP.md](VERCEL_SETUP.md). The database-only Cloudflare Worker needs no code change for these features.
 
 ```powershell
 npm.cmd run db:migrate:local

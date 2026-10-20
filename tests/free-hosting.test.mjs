@@ -66,3 +66,20 @@ test('alternate Vercel hostnames cannot authorize writes with their own Origin',
   }), { GRADEVIEW_DATABASE_URL: 'https://database.example', GRADEVIEW_DATABASE_SECRET: secret });
   assert.equal(response.status, 403);
 });
+
+test('the exact configured admin branch alias supports login, while other aliases remain denied', async () => {
+  const adminOrigin = 'https://bsitgridview-git-main-makis-projects-c74e13c6.vercel.app';
+  const env = { GRADEVIEW_DATABASE_URL: 'https://database.example', GRADEVIEW_DATABASE_SECRET: secret, VERCEL_ENV: 'production' };
+  for (const [host, origin, expected] of [
+    [adminOrigin, adminOrigin, 400],
+    ['https://bsitgridview.vercel.app', 'https://bsitgridview.vercel.app', 400],
+    ['https://other-branch.vercel.app', 'https://other-branch.vercel.app', 403],
+    ['https://bsitgridview.vercel.app', adminOrigin, 403],
+  ]) {
+    const response = await handleVercelRequest(new Request(host + '/api/login', {
+      method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/json' }, body: '{}',
+    }), env);
+    // A 400 means origin checks passed and the intentionally empty login was validated.
+    assert.equal(response.status, expected);
+  }
+});

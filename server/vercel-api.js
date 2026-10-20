@@ -16,9 +16,12 @@ export async function handleVercelRequest(request, environment = process.env) {
     } });
   }
   const appOrigin = environment.APP_ORIGIN || 'https://bsitgridview.vercel.app';
-  // Keep the existing exact-origin write checks, even on alternate Vercel hostnames.
   const original = new URL(request.url);
-  const url = new URL(original.pathname + original.search, appOrigin);
+  // The owner also uses this exact production branch alias for administrator login.
+  // Other deployment hosts still use the canonical origin and cannot authorize writes.
+  const adminBranchOrigin = 'https://bsitgridview-git-main-makis-projects-c74e13c6.vercel.app';
+  const servedOrigin = original.origin === adminBranchOrigin ? adminBranchOrigin : appOrigin;
+  const url = new URL(original.pathname + original.search, servedOrigin);
   const headers = new Headers(request.headers);
   // Vercel overwrites x-forwarded-for. Ignore a client-supplied Cloudflare IP header.
   headers.set('CF-Connecting-IP', request.headers.get('x-forwarded-for')?.split(',')[0].trim() || 'local');
@@ -26,5 +29,5 @@ export async function handleVercelRequest(request, environment = process.env) {
     method: request.method, headers, body: request.body,
     ...(request.body ? { duplex: 'half' } : {}),
   });
-  return worker.fetch(forwarded, { DB: db, APP_ORIGIN: appOrigin });
+  return worker.fetch(forwarded, { DB: db, APP_ORIGIN: servedOrigin });
 }
