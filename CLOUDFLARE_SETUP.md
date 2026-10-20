@@ -1,5 +1,7 @@
 # BSIT gradeview: Cloudflare D1 setup
 
+**Current free hosting:** use [VERCEL_SETUP.md](VERCEL_SETUP.md). `npm run cf:deploy` now deploys the protected database gateway with `wrangler.free.jsonc`; the API and bcrypt run in a Vercel Node function. The all-in-one Worker instructions below remain for local development and the optional paid deployment (`npm run cf:deploy:paid`).
+
 This project includes a Cloudflare Worker API and a D1 database. `wrangler.jsonc` is now bound to the hosted `bsit-gradeview-db`. The curriculum and the 161 students from `Names.pdf` have been imported, with first-login password changes required for the imported accounts. Reuse this database; the creation steps below are for a new account/project. Database import does not publish the Worker: complete Workers onboarding and deploy the current code before opening the site to students.
 
 React/Vite builds the interface. A Worker serves that build and handles `/api/*`. The Worker accesses SQLite-based D1 through its private `DB` binding; the browser never receives database credentials. In database mode, login is checked on the server, students receive only their own records, and only administrators can edit grades.
@@ -97,7 +99,7 @@ You can use `--local` instead of `--remote` to create local test accounts. Accou
 This implementation verifies passwords with bcrypt at cost 12. Plan to use **Workers Paid** for these login endpoints: password hashing is expected to exceed the Workers Free 10 ms CPU allowance. Paid Workers have a higher CPU allowance; local development does not enforce the production CPU limit. If you need a strictly free deployment, adapt authentication to a managed identity provider before enabling hosted sign-in. See [Cloudflare's current CPU limits](https://developers.cloudflare.com/workers/platform/limits/#cpu-time).
 
 ```powershell
-npm.cmd run cf:deploy
+npm.cmd run cf:deploy:paid
 ```
 
 Wrangler prints the deployed HTTPS URL, typically `https://bsit-gradeview.<your-subdomain>.workers.dev`. Open:

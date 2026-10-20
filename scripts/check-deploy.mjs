@@ -4,5 +4,11 @@ if (config.d1_databases[0].database_id === '00000000-0000-0000-0000-000000000000
 if (config.d1_databases[0].binding !== 'DB') throw new Error('Production requires the DB binding.');
 if (config.preview_urls !== false) throw new Error('Disable preview URLs for the production database.');
 if (!config.triggers?.crons?.length) throw new Error('Configure scheduled authentication cleanup.');
+const free = JSON.parse(fs.readFileSync(new URL('../wrangler.free.jsonc', import.meta.url), 'utf8'));
+if (free.main !== 'server/database-worker.js' || free.limits || free.assets) throw new Error('Free Worker must only run the database gateway, without paid CPU settings.');
+if (JSON.stringify(free.d1_databases) !== JSON.stringify(config.d1_databases)) throw new Error('Free and local/paid configurations must use the same existing database.');
+if (free.preview_urls !== false || !free.triggers?.crons?.length) throw new Error('Free Worker requires authentication cleanup and disabled preview URLs.');
+const vercel = JSON.parse(fs.readFileSync(new URL('../vercel.json', import.meta.url), 'utf8'));
+if (vercel.rewrites?.some(rule => rule.source.startsWith('/api'))) throw new Error('Vercel API routes must use the Node function, not an external rewrite.');
 const headers = fs.readFileSync(new URL('../public/_headers', import.meta.url), 'utf8');
 if (!headers.includes("script-src 'self'") || !headers.includes("frame-ancestors 'none'")) throw new Error('Production security headers are missing.');

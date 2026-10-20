@@ -1,0 +1,68 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import gateway from '../server/database-worker.js';
+import { createRemoteDatabase } from '../server/remote-database.js';
+import { handleVercelRequest } from '../server/vercel-api.js';
+
+const secret = 'a'.repeat(64);
+const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${secret}` };
+const request = (body, extra = {}) => new Request('https://database.example/internal/database', {
+  method: 'POST', headers: { ...headers, ...extra }, body: typeof body === 'string' ? body : JSON.stringify(body),
+});
+
+test('database gateway rejects missing secrets and malformed/big requests before querying D1', async () => {
+  for (const env of [{}, { DATABASE_SECRET: '' }, { DATABASE_SECRET: 'b'.repeat(64) }]) {
+    assert.equal((await gateway.fetch(request([]), env)).status, 404);
+  }
+  for (const input of ['null', '{}', '[]', '{invalid', ' '.repeat(65537),
+    [{ sql: 'SELECT ?', params: [{}] }], Array(21).fill({ sql: 'SELECT 1', params: [] })]) {
+    assert.equal((await gateway.fetch(request(input), { DATABASE_SECRET: secret })).status, 400);
+  }
+});
+
+test('remote D1 adapter preserves bindings and batch results and masks database errors', async () => {
+  const calls = [];
+  const db = createRemoteDatabase('https://database.example', secret, { fetcher: async (url, options) => {
+    assert.equal(options.redirect, 'error');
+    return gateway.fetch(new Request(url, options), { DATABASE_SECRET: secret, DB: {
+      prepare(sql) { return { bind(...params) { calls.push({ sql, params }); return { sql, params }; } }; },
+      async batch(statements) {
+        if (statements[0].sql === 'FAIL') throw new Error('SQL with private data failed');
+        return statements.map(() => ({ success: true, results: [{ value: 42 }], meta: { changes: 1 } }));
+      },
+    } });
+  } });
+  assert.equal(await db.prepare('SELECT ? AS value').bind(42).first('value'), 42);
+  const batch = await db.batch([db.prepare('INSERT A').bind('a'), db.prepare('INSERT B').bind(null,2)]);
+  assert.equal(batch.length, 2);
+  assert.equal(batch[1].meta.changes, 1);
+  assert.deepEqual(calls[2], { sql: 'INSERT B', params: [null,2] });
+  await assert.rejects(db.prepare('FAIL').all(), /^Error: Database request failed\.$/);
+});
+
+test('connection requires HTTPS and secret; failed/partial results are never accepted as success', async () => {
+  assert.throws(() => createRemoteDatabase('http://database.example', secret));
+  assert.throws(() => createRemoteDatabase('https://database.example', ''));
+  assert.throws(() => createRemoteDatabase('https://database.example/api', secret));
+  for (const result of [[], [{ success: false, results: [] }]]) {
+    const db = createRemoteDatabase('https://database.example', secret, { fetcher: async () => Response.json({ result }) });
+    await assert.rejects(db.prepare('SELECT 1').all());
+  }
+});
+
+test('Vercel fails closed without configuration and on preview deployments', async () => {
+  const req = new Request('https://bsitgridview.vercel.app/api/health');
+  for (const env of [{}, { GRADEVIEW_DATABASE_URL: 'https://database.example', GRADEVIEW_DATABASE_SECRET: secret, VERCEL_ENV: 'preview' }]) {
+    const response = await handleVercelRequest(req, env);
+    assert.equal(response.status, 503);
+    assert.equal(response.headers.get('Cache-Control'), 'no-store');
+    assert(!JSON.stringify(await response.json()).includes(secret));
+  }
+});
+
+test('alternate Vercel hostnames cannot authorize writes with their own Origin', async () => {
+  const response = await handleVercelRequest(new Request('https://preview.vercel.app/api/login', {
+    method: 'POST', headers: { Origin: 'https://preview.vercel.app', 'Content-Type': 'application/json' }, body: '{}',
+  }), { GRADEVIEW_DATABASE_URL: 'https://database.example', GRADEVIEW_DATABASE_SECRET: secret });
+  assert.equal(response.status, 403);
+});

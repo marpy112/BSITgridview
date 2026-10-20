@@ -1,46 +1,61 @@
-# Connect the Vercel frontend to Cloudflare
+# Free Vercel API + Cloudflare D1
 
-Frontend: https://bsitgridview.vercel.app
+Frontend and Node API: https://bsitgridview.vercel.app
 
-Cloudflare still runs the API and D1 database. A frontend deployment alone cannot process logins. Vercel has its own security headers in `vercel.json`; Cloudflare's `public/_headers` file does not configure Vercel.
+Database gateway: https://bsit-gradeview.bsitibagridview.workers.dev
 
-1. Finish Cloudflare Workers onboarding in the dashboard and choose a `workers.dev` subdomain. Confirm Workers Paid is enabled for the bcrypt CPU budget; these scripts do not purchase a plan.
-2. In PowerShell, open this project and authorize Cloudflare:
+The Vercel Node function `api/[...path].js` runs the existing API, including bcrypt cost 12. The Free Cloudflare Worker only executes database queries using the existing D1 binding. Accounts, password hashes, grades, sessions, origin checks, and atomic database writes are preserved. No database recreation, student import, password reset, or paid CPU setting is needed.
+
+Both services have free usage limits. Vercel Hobby is for personal, non-commercial projects; confirm eligibility before using it for an institution's production service. Usage beyond the free allowances can interrupt service. This setup does not enable paid services or purchase a plan.
+
+## 1. Deploy the database gateway
+
+In PowerShell in this project:
 
 ```powershell
 npm.cmd run cf:login
-```
-
-3. Back up D1, apply the new indexes, and deploy the Worker:
-
-```powershell
-New-Item -ItemType Directory -Force backups
-npx.cmd wrangler d1 export bsit-gradeview-db --remote --output backups/before-vercel.sql
-npm.cmd run db:migrate:remote
+npx.cmd wrangler d1 migrations list bsit-gradeview-db --remote
+npm.cmd run free:setup
 npm.cmd run cf:deploy
 ```
 
-Keep the existing database and administrator. Do not run database creation or reimport students for this deployment. If the backup file already exists, choose a new filename.
+`free:setup` generates a 256-bit server secret in the ignored file `.local/deployment/database-secret.txt` and uploads it as the Cloudflare secret `DATABASE_SECRET`. Re-running it reuses the saved secret. Keep that file private. Losing or replacing the file requires updating both providers to the same new value.
 
-4. Copy the production Worker address Wrangler prints. Connect it using the helper, replacing the example with your real address:
+`cf:deploy` uses `wrangler.free.jsonc`, which has no paid CPU configuration and does not include the application or bcrypt. It uses the same existing database as `wrangler.jsonc`. The Worker exposes `/api/health` for readiness, and a secret-protected `/internal/database` endpoint for Vercel. Direct browser database requests and all other public routes are denied. Hourly cleanup removes expired sessions and throttle entries.
+
+If migrations are pending, back up D1 before applying them as described in `CLOUDFLARE_SETUP.md`. Do not create another database or reimport existing accounts.
+
+## 2. Set Vercel Production environment variables
+
+Open the Vercel project → Settings → Environment Variables. Add these to **Production only**:
+
+| Name | Value |
+| --- | --- |
+| `GRADEVIEW_DATABASE_URL` | `https://bsit-gradeview.bsitibagridview.workers.dev` |
+| `GRADEVIEW_DATABASE_SECRET` | Exact contents of `.local/deployment/database-secret.txt` |
+
+To copy the secret without displaying it in the terminal:
 
 ```powershell
-npm.cmd run vercel:backend -- https://bsit-gradeview.YOUR-SUBDOMAIN.workers.dev
-git add vercel.json
-git commit -m "Connect Vercel API to deployed Cloudflare Worker"
-git push origin main
+Get-Content -Raw .local/deployment/database-secret.txt | Set-Clipboard
 ```
 
-The helper writes an external `/api/:path*` rewrite. Until the Worker address is configured, API routes on Vercel are not connected. In Vercel, confirm the production branch is `main`, Framework is Vite, build command is `npm run build`, output directory is `dist`, and the new deployment succeeds. Do not use `cf:deploy` as Vercel's build command or put Cloudflare credentials into Vercel environment variables.
+Paste into the Vercel secret value field. Never prefix these variable names with `VITE_`, commit them, or paste them into chat. A Cloudflare API token or OAuth credential is not needed on Vercel. Preview deployments do not get the production secret and cannot use the production API.
 
-5. Verify after the Vercel deployment finishes:
+Keep Framework **Vite**, build command **npm run build**, output directory **dist**, production branch **main**, and Node.js **22.x or newer**. The Node API is deployed from the root `api` directory separately from the static build. `vercel.json` sets a 60-second function duration. There must be no external `/api` rewrite: all application API paths resolve to the local catch-all function.
+
+Commit and push the implementation to `main` (or deploy it with the Vercel CLI), then wait for the production deployment. If you add or change environment variables after a deployment, redeploy so the function receives them. Setting variables alone does not update an existing deployment.
+
+## 3. Verify
 
 ```powershell
 npm.cmd run production:smoke -- https://bsitgridview.vercel.app
 ```
 
-Then open `https://bsitgridview.vercel.app/#/admin/login` and sign in. Verify student first-login password changes and a PDF download. Confirm the session cookie is HttpOnly and Secure in browser developer tools and refresh the page to verify the session survives the proxy. Initial student passwords remain their exact surnames.
+Expected: homepage 200, database health 200, signed-out session 401. The health check reveals no student information. Then test an existing administrator login, student first-login password change, a PDF download, and a refresh after saving a grade. Session cookies should be HttpOnly and Secure on HTTPS.
 
-The Worker permits writes from its own origin and the exact `APP_ORIGIN` value `https://bsitgridview.vercel.app`. Requests from other Vercel preview addresses are denied. Keep frontend requests on `/api`; the rewrite forwards them without cross-origin browser fetches. No wildcard origin or CORS relaxation is needed. If the production frontend domain changes, update `APP_ORIGIN` in `wrangler.jsonc` and redeploy the Worker.
+`npm run test:free` runs the existing API integration suite through the actual Vercel entry point and local database gateway, using an isolated database. It also checks denied gateway access, bounded payloads, preview isolation, and rollback after a failed transaction. No hosted student records are used by these tests.
 
-References: [Vercel external rewrites](https://vercel.com/docs/routing/rewrites), [Vite on Vercel](https://vercel.com/docs/frameworks/frontend/vite).
+Local development still uses `npm run cf:dev` with the full API and a local D1 database. `npm run cf:deploy:paid` retains the optional all-in-one Worker deployment and requires an appropriate paid plan; it is not used for this free setup.
+
+References: [Vercel Node functions](https://vercel.com/docs/functions/runtimes/node-js), [Vercel Hobby](https://vercel.com/docs/plans/hobby), [Cloudflare Free limits](https://developers.cloudflare.com/workers/platform/limits/), [D1 atomic batches](https://developers.cloudflare.com/d1/worker-api/d1-database/#batch).

@@ -1,0 +1,18 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "bsit-gradeview",
+  "main": "server/database-worker.js",
+  "compatibility_date": "2026-10-19",
+  "workers_dev": true,
+  "preview_urls": false,
+  "observability": { "logs": { "enabled": true, "invocation_logs": false } },
+  "triggers": { "crons": ["17 * * * *"] },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "bsit-gradeview-db",
+      "database_id": "2649fd07-0336-40b5-a446-d87cfe6888aa",
+      "migrations_dir": "migrations"
+    }
+  ]
+}
