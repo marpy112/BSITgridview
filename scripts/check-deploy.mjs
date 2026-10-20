@@ -9,6 +9,8 @@ if (free.main !== 'server/database-worker.js' || free.limits || free.assets) thr
 if (JSON.stringify(free.d1_databases) !== JSON.stringify(config.d1_databases)) throw new Error('Free and local/paid configurations must use the same existing database.');
 if (free.preview_urls !== false || !free.triggers?.crons?.length) throw new Error('Free Worker requires authentication cleanup and disabled preview URLs.');
 const vercel = JSON.parse(fs.readFileSync(new URL('../vercel.json', import.meta.url), 'utf8'));
-if (vercel.rewrites?.some(rule => rule.source.startsWith('/api'))) throw new Error('Vercel API routes must use the Node function, not an external rewrite.');
+const apiRewrites = vercel.rewrites?.filter(rule => rule.source.startsWith('/api')) || [];
+if (apiRewrites.length !== 1 || apiRewrites[0].source !== '/api/:path*' || apiRewrites[0].destination !== '/api/index?__gradeview_path=:path*') throw new Error('Vercel must route all API path depths to the local Node function.');
+if (!fs.existsSync(new URL('../api/index.js', import.meta.url))) throw new Error('The Vercel API function is missing.');
 const headers = fs.readFileSync(new URL('../public/_headers', import.meta.url), 'utf8');
 if (!headers.includes("script-src 'self'") || !headers.includes("frame-ancestors 'none'")) throw new Error('Production security headers are missing.');

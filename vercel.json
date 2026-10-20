@@ -4,6 +4,7 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [
+    { "source": "/api/:path*", "destination": "/api/index?__gradeview_path=:path*" },
     { "source": "/login", "destination": "/index.html" },
     { "source": "/login/", "destination": "/index.html" }
   ],

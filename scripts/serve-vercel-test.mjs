@@ -1,7 +1,11 @@
 // Local HTTP adapter for exercising the production Fetch entry point in integration tests.
 import http from 'node:http';
 import fs from 'node:fs/promises';
-import entry from '../api/[...path].js';
+import entry from '../api/index.js';
+
+const config = JSON.parse(await fs.readFile('vercel.json', 'utf8'));
+const apiRewrite = config.rewrites.find(rule => rule.source === '/api/:path*');
+if (!apiRewrite || apiRewrite.destination !== '/api/index?__gradeview_path=:path*') throw new Error('Missing nested API routing.');
 
 const server = http.createServer(async (incoming, outgoing) => {
   try {
@@ -9,7 +13,11 @@ const server = http.createServer(async (incoming, outgoing) => {
     let response;
     if (incoming.url.startsWith('/api/')) {
       const body = ['GET', 'HEAD'].includes(incoming.method) ? undefined : incoming;
-      response = await entry.fetch(new Request(new URL(incoming.url, origin), {
+      const original = new URL(incoming.url, origin);
+      const target = new URL(apiRewrite.destination.split('?')[0], origin);
+      target.search = original.search;
+      target.searchParams.set('__gradeview_path', original.pathname.slice('/api/'.length));
+      response = await entry.fetch(new Request(target, {
         method: incoming.method, headers: incoming.headers, body, ...(body ? { duplex: 'half' } : {}),
       }));
     } else {

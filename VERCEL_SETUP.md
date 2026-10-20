@@ -8,7 +8,7 @@ Administrator login: https://bsitgridview-git-main-makis-projects-c74e13c6.verce
 
 Database gateway: https://bsit-gradeview.bsitibagridview.workers.dev
 
-The Vercel Node function `api/[...path].js` runs the existing API, including bcrypt cost 12. The Free Cloudflare Worker only executes database queries using the existing D1 binding. Accounts, password hashes, grades, sessions, origin checks, and atomic database writes are preserved. No database recreation, student import, password reset, or paid CPU setting is needed.
+The Vercel Node function `api/index.js` runs the existing API, including bcrypt cost 12. An explicit local rewrite sends all `/api/:path*` requests to this function, including nested student, grade, password-reset, and retake endpoints. The Free Cloudflare Worker only executes database queries using the existing D1 binding. Accounts, password hashes, grades, sessions, origin checks, and atomic database writes are preserved. No database recreation, student import, password reset, or paid CPU setting is needed.
 
 Both services have free usage limits. Vercel Hobby is for personal, non-commercial projects; confirm eligibility before using it for an institution's production service. Usage beyond the free allowances can interrupt service. This setup does not enable paid services or purchase a plan.
 
@@ -54,7 +54,7 @@ Get-Content -Raw .local/deployment/database-secret.txt | Set-Clipboard
 
 Paste into the Vercel secret value field. Never prefix these variable names with `VITE_`, commit them, or paste them into chat. A Cloudflare API token or OAuth credential is not needed on Vercel. Preview deployments do not get the production secret and cannot use the production API.
 
-Keep Framework **Vite**, build command **npm run build**, output directory **dist**, production branch **main**, and Node.js **22.x or newer**. The Node API is deployed from the root `api` directory separately from the static build. `vercel.json` sets a 60-second function duration. There must be no external `/api` rewrite: all application API paths resolve to the local catch-all function.
+Keep Framework **Vite**, build command **npm run build**, output directory **dist**, production branch **main**, and Node.js **22.x or newer**. The Node API is deployed from the root `api` directory separately from the static build. `vercel.json` sets a 60-second function duration. Keep the local `/api/:path*` rewrite to `/api/index?__gradeview_path=:path*`; it passes the requested route to the Node function. Do not replace it with an external gateway rewrite. A standalone Vite function named `[...path].js` does not provide Next.js catch-all routing for nested paths.
 
 Commit and push the implementation to `main` (or deploy it with the Vercel CLI), then wait for the production deployment. If you add or change environment variables after a deployment, redeploy so the function receives them. Setting variables alone does not update an existing deployment.
 
@@ -84,7 +84,7 @@ When updating to the instructor-directory and student-reset features, first back
 npm.cmd run production:smoke -- https://bsitgridview.vercel.app
 ```
 
-Expected: homepage 200, database health 200, signed-out session 401. The health check reveals no student information. Then test an existing administrator login, student first-login password change, a PDF download, and a refresh after saving a grade. Session cookies should be HttpOnly and Secure on HTTPS.
+Expected: homepage 200, database health 200, signed-out session 401, and signed-out nested API requests 401. These checks reveal no student information and make no student changes. A plain-text Vercel 404 for a nested API path means the request did not reach the Node function; deploy the updated routing configuration. Then test an existing administrator login, student first-login password change, a PDF download, and a refresh after saving a grade. Session cookies should be HttpOnly and Secure on HTTPS.
 
 `npm run test:free` runs the existing API integration suite through the actual Vercel entry point and local database gateway, using an isolated database. It also checks denied gateway access, bounded payloads, preview isolation, and rollback after a failed transaction. No hosted student records are used by these tests.
 

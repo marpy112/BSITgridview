@@ -2,12 +2,34 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import gateway from '../server/database-worker.js';
 import { createRemoteDatabase } from '../server/remote-database.js';
-import { handleVercelRequest } from '../server/vercel-api.js';
+import { applicationUrl, handleVercelRequest } from '../server/vercel-api.js';
 
 const secret = 'a'.repeat(64);
 const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${secret}` };
 const request = (body, extra = {}) => new Request('https://database.example/internal/database', {
   method: 'POST', headers: { ...headers, ...extra }, body: typeof body === 'string' ? body : JSON.stringify(body),
+});
+
+test('nested API rewrites preserve student IDs, course codes, and the original route', () => {
+  const origin = 'https://bsitgridview.vercel.app';
+  for (const path of ['students/5225659', 'students/5225659/records/IT%2001', 'students/5225659/reset-password', 'students/5225659/records/IT%2001/retake']) {
+    const target = new URL('/api/index?filter=current', origin);
+    target.searchParams.set('__gradeview_path', path);
+    const resolved = applicationUrl(target, origin);
+    assert.equal(resolved.pathname, '/api/' + path);
+    assert.equal(resolved.search, '?filter=current');
+    // A runtime that retains the original path must not replace it with query input.
+    const original = new URL('/api/' + path + '?__gradeview_path=login', origin);
+    assert.equal(applicationUrl(original, origin).pathname, original.pathname);
+  }
+  const decoded = new URL('/api/index', origin);
+  decoded.searchParams.set('__gradeview_path', 'students/5225659/records/IT 01');
+  assert.equal(applicationUrl(decoded, origin).pathname, '/api/students/5225659/records/IT%2001');
+  for (const path of ['', '../login', 'students/../../login', 'students?id=1', 'students#fragment', 'students\\..\\login']) {
+    const target = new URL('/api/index', origin);
+    target.searchParams.set('__gradeview_path', path);
+    assert.equal(applicationUrl(target, origin), null);
+  }
 });
 
 test('database gateway rejects missing secrets and malformed/big requests before querying D1', async () => {
