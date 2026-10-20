@@ -30,9 +30,7 @@
 .record-entry-table input::placeholder{color:#9aa6ba}
 .record-entry-table input:focus-visible,.record-entry-table select:focus-visible{border-color:var(--blue);outline:2px solid #315be82b;outline-offset:1px}
 .record-entry-table input:disabled,.record-entry-table select:disabled{background:var(--bg);color:var(--muted);opacity:.75;cursor:default}
-.record-entry-table input.record-grade-input{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;text-align:center;padding:8px 4px}
-.record-entry-table .record-grade-input::-webkit-inner-spin-button,.record-entry-table .record-grade-input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
-.record-entry-table .record-grade-input{appearance:textfield;-moz-appearance:textfield}
+.record-entry-table select.record-grade-select{font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;padding:9px 4px}
 .record-entry-table .record-status-select{font-size:11px;font-weight:500;padding-left:8px}
 .record-entry-table .record-status-select.passed{background:#edf8f2;color:#34745b;border-color:#d1e9dc}
 .record-entry-table .record-status-select.failed{background:#fff0f2;color:#ad4259;border-color:#f0d4dc}

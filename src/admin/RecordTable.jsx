@@ -2,6 +2,7 @@ import { Fragment, useEffect, useId, useState } from 'react';
 import { academicYearLabel } from '../../shared/academic.js';
 import { termLabels } from '../data.js';
 import { validateRecord } from './RecordEditor.jsx';
+import GradeSelect from './GradeSelect.jsx';
 import './record-table.css';
 
 const statuses = ['Not taken', 'In progress', 'Incomplete', 'Passed', 'Failed'];
@@ -105,7 +106,7 @@ export default function RecordTable({ student, visibleCourses, academicTerm, ins
 
   return <section className="record-sheet" aria-label="Edit student course records" aria-busy={saving}>
     <div className="record-sheet-heading">
-      <div><h3>Course grades <span>{visibleCourses.length} courses</span></h3><p>Enter grades directly. Passing and failing statuses are selected for you.</p></div>
+      <div><h3>Course grades <span>{visibleCourses.length} courses</span></h3><p>Select a grade. Passing and failing statuses are selected for you.</p></div>
       <div className="record-sheet-heading-actions"><span className="record-sheet-scale">1.00 highest <span>·</span> 3.00 passing limit</span><button type="button" className="secondary-button" disabled={saving} onClick={onAddInstructor}>+ Add instructor</button></div>
     </div>
     <p className="record-sheet-mobile-hint">Scroll the table left or right to reach the grade and other fields.</p>
@@ -123,7 +124,7 @@ export default function RecordTable({ student, visibleCourses, academicTerm, ins
               <th scope="row" className="record-course"><strong>{course.code}{dirty && <span className="record-dirty-dot" aria-label="Unsaved changes" />}</strong><span>{course.title}</span><small>{course.sourceRequirementColumn === 'Labhours' ? 'OJT requirement' : 'Prerequisite'}: {course.prerequisite}</small></th>
               <td className="record-units">{course.units}</td>
               <td><select aria-label={`${course.code} instructor`} aria-describedby={errors[course.code] ? errorId : undefined} value={draft.instructor} disabled={saving} onChange={event => edit(course, { instructor: event.target.value })}><option value="">Unassigned</option>{draft.instructor && !instructors.some(item => item.name === draft.instructor) && <option value={draft.instructor}>{draft.instructor}</option>}{instructors.map(item => <option key={item.id} value={item.name}>{item.name}</option>)}</select></td>
-              <td><input className="record-grade-input" aria-label={`${course.code} grade`} aria-describedby={errors[course.code] ? errorId : undefined} type="number" inputMode="decimal" min="1" max="5" step="0.01" value={draft.grade} placeholder="—" disabled={saving} onChange={event => changeGrade(course, event.target.value)} /></td>
+              <td><GradeSelect className="record-grade-select" aria-label={`${course.code} grade`} aria-describedby={errors[course.code] ? errorId : undefined} value={draft.grade} disabled={saving} onChange={event => changeGrade(course, event.target.value)} /></td>
               <td><select aria-label={`${course.code} status`} className={`record-status-select ${draft.status.toLowerCase().replaceAll(' ', '-')}`} value={draft.status} disabled={saving} onChange={event => edit(course, { status: event.target.value, ...(!['Passed', 'Failed'].includes(event.target.value) ? { grade: '' } : {}) })}>{statuses.map(status => <option key={status}>{status}</option>)}</select></td>
               <td><input aria-label={`${course.code} school year starts`} type="number" min="2000" max="2199" step="1" value={draft.status === 'Not taken' ? '' : draft.schoolYear} placeholder="Not taken" disabled={saving || draft.status === 'Not taken'} onChange={event => edit(course, { schoolYear: event.target.value })} /><span className="record-year-end">{draft.status === 'Not taken' ? 'Not recorded' : `${draft.schoolYear || '…'}–${draft.schoolYear ? Number(draft.schoolYear) + 1 : '…'}`}</span></td>
               <td><select aria-label={`${course.code} term taken`} value={draft.semester} disabled={saving || draft.status === 'Not taken'} onChange={event => edit(course, { semester: event.target.value })}>{Object.entries(termLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></td>
