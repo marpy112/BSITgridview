@@ -18,6 +18,8 @@
     "cf:deploy:free": "npm run release:check && wrangler deploy --config wrangler.free.jsonc",
     "free:setup": "node scripts/setup-free-hosting.mjs",
     "test:free": "node --test tests/free-hosting.test.mjs && node scripts/test-admin.mjs --all --free",
+    "test:turso": "node --test tests/turso.test.mjs && node scripts/test-turso.mjs",
+    "turso:import": "node --env-file-if-exists=.local/deployment/turso.env scripts/turso-import.mjs",
     "cf:login": "wrangler login",
     "db:create": "wrangler d1 create bsit-gradeview-db",
     "db:bind": "node scripts/set-database-id.mjs",
@@ -31,6 +33,7 @@
     "test:admin": "node scripts/test-admin.mjs"
   },
   "dependencies": {
+    "@libsql/client": "0.18.0",
     "bcryptjs": "3.0.3",
     "jspdf": "4.2.1",
     "jspdf-autotable": "5.0.9",

@@ -4,6 +4,11 @@ import { spawnSync } from 'node:child_process';
 import { hash } from 'bcryptjs';
 
 export function executeLocal(sql) {
+  if (process.env.GRADEVIEW_TURSO_TEST_URL) {
+    const result = spawnSync(process.execPath, ['tests/helpers/execute-turso.mjs'], { input: sql, encoding: 'utf8', env: process.env, windowsHide: true });
+    if (result.status !== 0) throw new Error('Isolated Turso fixture query failed.');
+    return;
+  }
   const file = path.resolve(`.db-account-${crypto.randomUUID()}.sql`);
   try {
     fs.writeFileSync(file,sql);

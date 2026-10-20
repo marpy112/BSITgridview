@@ -1,5 +1,6 @@
 import worker from './worker.js';
 import { createRemoteDatabase } from './remote-database.js';
+import { createTursoDatabase } from './turso-database.js';
 
 export function applicationUrl(original, origin) {
   const url = new URL(original.pathname + original.search, origin);
@@ -19,9 +20,11 @@ export async function handleVercelRequest(request, environment = process.env) {
   try {
     // Production database credentials belong only in Vercel's Production environment.
     if (environment.VERCEL_ENV && environment.VERCEL_ENV !== 'production') throw new Error();
-    db = createRemoteDatabase(environment.GRADEVIEW_DATABASE_URL, environment.GRADEVIEW_DATABASE_SECRET, {
-      allowLocal: !environment.VERCEL && environment.NODE_ENV === 'test',
-    });
+    const localTest = !environment.VERCEL && environment.NODE_ENV === 'test';
+    const provider = environment.GRADEVIEW_DATABASE_PROVIDER || 'cloudflare';
+    if (provider === 'turso') db = await createTursoDatabase(environment.TURSO_DATABASE_URL, environment.TURSO_AUTH_TOKEN, { allowFile: localTest });
+    else if (provider === 'cloudflare') db = createRemoteDatabase(environment.GRADEVIEW_DATABASE_URL, environment.GRADEVIEW_DATABASE_SECRET, { allowLocal: localTest });
+    else throw new Error('Unknown database provider.');
   } catch {
     return Response.json({ error: 'The database connection is not configured.' }, { status: 503, headers: {
       'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'X-Frame-Options': 'DENY',
@@ -35,10 +38,10 @@ export async function handleVercelRequest(request, environment = process.env) {
   const adminBranchOrigin = 'https://bsitgridview-git-main-makis-projects-c74e13c6.vercel.app';
   const servedOrigin = original.origin === adminBranchOrigin ? adminBranchOrigin : appOrigin;
   const url = applicationUrl(original, servedOrigin);
-  if (!url) return Response.json({ error: 'API endpoint not found.' }, { status: 404, headers: {
+  if (!url) { db.close?.(); return Response.json({ error: 'API endpoint not found.' }, { status: 404, headers: {
     'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'X-Frame-Options': 'DENY',
     'Strict-Transport-Security': 'max-age=31536000',
-  } });
+  } }); }
   const headers = new Headers(request.headers);
   // Vercel overwrites x-forwarded-for. Ignore a client-supplied Cloudflare IP header.
   headers.set('CF-Connecting-IP', request.headers.get('x-forwarded-for')?.split(',')[0].trim() || 'local');
@@ -46,5 +49,6 @@ export async function handleVercelRequest(request, environment = process.env) {
     method: request.method, headers, body: request.body,
     ...(request.body ? { duplex: 'half' } : {}),
   });
-  return worker.fetch(forwarded, { DB: db, APP_ORIGIN: servedOrigin });
+  try { return await worker.fetch(forwarded, { DB: db, APP_ORIGIN: servedOrigin }); }
+  finally { db.close?.(); }
 }

@@ -11,6 +11,12 @@ if (!['127.0.0.1','localhost'].includes(new URL(base).hostname)) throw new Error
 const id = '90909090';
 const name = 'ONBOARDING TEST STUDENT';
 function execute(sql) {
+  if (process.env.GRADEVIEW_TURSO_TEST_URL) {
+    const result = spawnSync(process.execPath, ['tests/helpers/execute-turso.mjs'], { input: sql, encoding: 'utf8', windowsHide: true,
+      env: { ...process.env, GRADEVIEW_TEST_QUERY: /^\s*SELECT\b/i.test(sql) ? '1' : '0' } });
+    assert.equal(result.status, 0, 'Isolated Turso onboarding fixture failed.');
+    return JSON.parse(result.stdout || '[]');
+  }
   const file = path.resolve(`.db-account-${crypto.randomUUID()}.sql`);
   try {
     fs.writeFileSync(file,sql);

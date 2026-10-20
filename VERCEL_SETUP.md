@@ -1,5 +1,7 @@
 # Free Vercel API + Cloudflare D1
 
+For the prepared Turso replacement, follow [TURSO_SETUP.md](TURSO_SETUP.md). The Cloudflare setup below remains active until a verified copy is ready and `GRADEVIEW_DATABASE_PROVIDER=turso` is set in Vercel Production.
+
 Frontend and Node API: https://bsitgridview.vercel.app
 
 Administrator login: https://bsitgridview-git-main-makis-projects-c74e13c6.vercel.app/login/
