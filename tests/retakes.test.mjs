@@ -6,7 +6,7 @@ import { createFixture, executeLocal } from './helpers/d1-fixture.mjs';
 const base = process.env.GRADEVIEW_TEST_URL;
 if (!base || !process.env.GRADEVIEW_TEST_CONFIG || !['127.0.0.1', 'localhost'].includes(new URL(base).hostname)) throw new Error('Use npm test against an isolated database.');
 const call = (route, method = 'GET', data, cookie, origin = base) => fetch(base + route, { method,
-  headers: { Origin: origin, Connection: 'close', 'Content-Type': 'application/json', ...(cookie ? { Cookie: cookie } : {}) },
+  headers: { Origin: origin, Connection: 'close', 'Content-Type': 'application/json', 'X-Gradeview-Partial': '1', ...(cookie ? { Cookie: cookie } : {}) },
   ...(data === undefined ? {} : { body: JSON.stringify(data) }),
 });
 async function login(role, identifier, password) {

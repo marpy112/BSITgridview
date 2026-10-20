@@ -3,11 +3,76 @@ import assert from 'node:assert/strict';
 import gateway from '../server/database-worker.js';
 import { createRemoteDatabase } from '../server/remote-database.js';
 import { applicationUrl, handleVercelRequest } from '../server/vercel-api.js';
+import worker from '../server/worker.js';
+import { dailyDatabaseLimit, isDailyDatabaseLimit } from '../server/database-errors.js';
+import { apiRequest, mergeStudents } from '../src/api.js';
 
 const secret = 'a'.repeat(64);
 const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${secret}` };
 const request = (body, extra = {}) => new Request('https://database.example/internal/database', {
   method: 'POST', headers: { ...headers, ...extra }, body: typeof body === 'string' ? body : JSON.stringify(body),
+});
+
+test('daily D1 limits return a safe 503 and the UTC reset time through the gateway and API', async () => {
+  const details = "Your account has exceeded D1's free tier daily row read limit. Private SQL and credentials must not be exposed.";
+  assert(isDailyDatabaseLimit(new Error(details)));
+  assert(isDailyDatabaseLimit(new Error("D1_ERROR: Your account has exceeded D1's free tier daily row write limit.")));
+  assert(!isDailyDatabaseLimit(new Error('Database syntax error.')));
+  const quota = dailyDatabaseLimit(Date.parse('2026-10-20T23:59:59.500Z'));
+  assert.equal(quota.retryAt, '2026-10-21T00:00:00.000Z');
+  assert.equal(quota.retryAfter, 1);
+  assert.equal(dailyDatabaseLimit(Date.parse('2026-10-20T00:00:00Z')).retryAfter, 86400);
+  const db = createRemoteDatabase('https://database.example', secret, { fetcher: async (url, options) => {
+    const response = await gateway.fetch(new Request(url, options), { DATABASE_SECRET: secret, DB: {
+      prepare() { return { bind() { return this; } }; },
+      async batch() { throw new Error(details); },
+    } });
+    assert.equal(response.status, 503);
+    assert(Number(response.headers.get('Retry-After')) > 0);
+    assert(!(await response.clone().text()).includes('Private SQL'));
+    return response;
+  } });
+  const response = await worker.fetch(new Request('https://app.example/api/login', {
+    method: 'POST', headers: { Origin: 'https://app.example', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ role: 'admin', identifier: 'admin@example.test', password: 'unused' }),
+  }), { DB: db });
+  assert.equal(response.status, 503);
+  const data = await response.json();
+  assert.equal(data.code, 'DATABASE_DAILY_LIMIT');
+  assert.equal(new Date(data.retryAt).getUTCHours(), 0);
+  assert(Number(response.headers.get('Retry-After')) > 0);
+  assert(!JSON.stringify(data).includes('Private SQL'));
+});
+
+test('a partial student update preserves other students and full sign-in snapshots replace old data', () => {
+  const first = { id: 'first', courses: [{ code: 'IT 01', grade: 2 }] };
+  const other = { id: 'other', courses: [{ code: 'IT 01', grade: 1 }] };
+  const updated = { ...first, courses: [{ code: 'IT 01', grade: 1.75 }] };
+  const merged = mergeStudents([first, other], { partialStudents: true, students: [updated] });
+  assert.equal(merged.length, 2);
+  assert.equal(merged[0].courses[0].grade, 1.75);
+  assert.equal(merged[1], other);
+  const added = { id: 'new', courses: [] };
+  assert.equal(mergeStudents(merged, { partialStudents: true, students: [added] }).length, 3);
+  assert.deepEqual(mergeStudents(merged, { students: [other] }), [other]);
+  assert.equal(first.courses[0].grade, 2, 'merging does not mutate the prior saved record');
+});
+
+test('the browser shows quota reset time and requests smaller mutation snapshots', async () => {
+  const originalFetch = globalThis.fetch;
+  const retryAt = '2026-10-21T00:00:00.000Z';
+  try {
+    globalThis.fetch = async (_url, options) => {
+      assert.equal(options.headers['X-Gradeview-Partial'], '1');
+      return Response.json({ error: 'Unavailable.', code: 'DATABASE_DAILY_LIMIT', retryAt }, { status: 503 });
+    };
+    await assert.rejects(apiRequest('/api/login'), error => {
+      assert.equal(error.status, 503);
+      assert.equal(error.code, 'DATABASE_DAILY_LIMIT');
+      assert(error.message.includes(new Date(retryAt).toLocaleString()));
+      return true;
+    });
+  } finally { globalThis.fetch = originalFetch; }
 });
 
 test('nested API rewrites preserve student IDs, course codes, and the original route', () => {

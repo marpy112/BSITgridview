@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import StudentPortal from './App.jsx';
 import AdminDashboard from './admin/AdminDashboard.jsx';
 import StudentLoginPage from './auth/StudentLoginPage.jsx';
 import AdminLoginPage from './auth/AdminLoginPage.jsx';
 import ChangePasswordPage from './auth/ChangePasswordPage.jsx';
 import './portal.css';
-import { apiRequest } from './api.js';
+import { apiRequest, mergeStudents } from './api.js';
 import { defaultAcademicTerm } from '../shared/academic.js';
 
 function initialRoute() {
@@ -23,10 +23,12 @@ export default function PortalApp() {
   const [connectionError, setConnectionError] = useState('');
   const [mustChangePassword, setMustChangePassword] = useState(false);
   const [academicTerm,setAcademicTerm] = useState(defaultAcademicTerm);
+  const lastFullSnapshotAt = useRef(0);
 
   function applySnapshot(data) {
     setRole(data.role);
-    setStudents(data.students);
+    setStudents(previous => mergeStudents(previous, data));
+    if (!data.partialStudents) lastFullSnapshotAt.current = Date.now();
     setActivity(data.activity);
     setInstructors(data.instructors || []);
     setMustChangePassword(Boolean(data.mustChangePassword));
@@ -54,8 +56,10 @@ export default function PortalApp() {
   useEffect(() => {
     if (!role || mustChangePassword) return;
     let active = true;
+    let refreshing = false;
     async function refresh() {
-      if (document.visibilityState === 'hidden') return;
+      if (document.visibilityState === 'hidden' || refreshing || Date.now() - lastFullSnapshotAt.current < 60000) return;
+      refreshing = true;
       try {
         const data = await apiRequest('/api/session');
         if (active) applySnapshot(data);
@@ -64,7 +68,7 @@ export default function PortalApp() {
           setRole(null); setStudents([]); setActivity([]); setInstructors([]);
           navigate(role === 'admin' ? '/admin/login' : '/student/login');
         }
-      }
+      } finally { refreshing = false; }
     }
     window.addEventListener('focus',refresh);
     document.addEventListener('visibilitychange',refresh);

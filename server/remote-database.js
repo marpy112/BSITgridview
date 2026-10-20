@@ -1,3 +1,5 @@
+import { dailyDatabaseLimit } from './database-errors.js';
+
 export function createRemoteDatabase(origin, secret, { fetcher = fetch, allowLocal = false } = {}) {
   const url = new URL(origin);
   const local = allowLocal && url.protocol === 'http:' && ['127.0.0.1', 'localhost'].includes(url.hostname);
@@ -11,6 +13,7 @@ export function createRemoteDatabase(origin, secret, { fetcher = fetch, allowLoc
       signal: AbortSignal.timeout(15000), redirect: 'error', cache: 'no-store',
     });
     const data = await response.json();
+    if (response.status === 503 && data.error === 'DATABASE_DAILY_LIMIT') throw dailyDatabaseLimit();
     if (!response.ok || !Array.isArray(data.result) || data.result.length !== statements.length ||
         data.result.some(item => item.success !== true || !Array.isArray(item.results))) {
       throw new Error(response.status === 409 && data.error === 'UNIQUE_CONSTRAINT'

@@ -1,8 +1,11 @@
 // Free-plan Worker: only database I/O runs here. The API and bcrypt run on Vercel.
-const reply = (data, status = 200) => Response.json(data, { status, headers: {
+import { dailyDatabaseLimit, isDailyDatabaseLimit } from './database-errors.js';
+
+const reply = (data, status = 200, headers = {}) => Response.json(data, { status, headers: {
   'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff',
   'X-Frame-Options': 'DENY', 'Strict-Transport-Security': 'max-age=31536000',
   'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none'",
+  ...headers,
 } });
 
 function authorized(request, secret) {
@@ -72,6 +75,10 @@ export default {
       return reply({ result });
     } catch (error) {
       // Never return SQL, student records, or credentials in database error messages.
+      if (isDailyDatabaseLimit(error)) {
+        const quota = dailyDatabaseLimit();
+        return reply({ error: quota.code, retryAt: quota.retryAt }, quota.status, { 'Retry-After': String(quota.retryAfter) });
+      }
       const conflict = /unique constraint/i.test(error.message);
       return reply({ error: conflict ? 'UNIQUE_CONSTRAINT' : 'DATABASE_ERROR' }, conflict ? 409 : 502);
     }

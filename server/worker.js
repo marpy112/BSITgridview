@@ -3,6 +3,7 @@ import { nextAcademicTerm, academicYearLabel, academicTermLabel } from '../share
 import { validateStudent } from './studentValidation.js';
 import { normalizeSchoolAcronym, validSchoolAcronym } from '../shared/transfer.js';
 import { nextRetakeTerm, retakeLabel } from '../shared/retakes.js';
+import { dailyDatabaseLimit, isDailyDatabaseLimit } from './database-errors.js';
 
 const COOKIE = 'gradeview_session';
 const SESSION_SECONDS = 60 * 60 * 8;
@@ -64,19 +65,22 @@ async function session(request, db) {
   return db.prepare(`SELECT a.id, a.role, a.student_no, a.must_change_password FROM sessions s JOIN accounts a ON a.id=s.account_id WHERE s.token_hash=? AND s.expires_at>?`).bind(await digest(token), Math.floor(Date.now() / 1000)).first();
 }
 
-async function snapshot(db, user) {
+async function snapshot(db, user, studentNo) {
   if (user.must_change_password) return { role: user.role, mustChangePassword: true, students: [], activity: [] };
   const term = await readAcademicTerm(db);
-  const students = user.role === 'admin'
+  const scopedStudent = user.role === 'admin' ? studentNo : user.student_no;
+  const students = !scopedStudent
     ? await db.prepare('SELECT * FROM students ORDER BY name').all()
-    : await db.prepare('SELECT * FROM students WHERE student_no=?').bind(user.student_no).all();
-  const query = `SELECT r.*, c.title, c.units, c.year_level, c.semester, c.prerequisite, c.source_requirement_column FROM progress_records r JOIN courses c ON c.code=r.course_code`;
-  const records = user.role === 'admin'
-    ? await db.prepare(`${query} ORDER BY c.sort_order`).all()
-    : await db.prepare(`${query} WHERE r.student_no=? ORDER BY c.sort_order`).bind(user.student_no).all();
-  const attempts = user.role === 'admin'
+    : await db.prepare('SELECT * FROM students WHERE student_no=?').bind(scopedStudent).all();
+  // Read the curriculum once instead of joining it to every student's record.
+  const curriculum = new Map((await db.prepare('SELECT * FROM courses ORDER BY sort_order').all()).results.map(course => [course.code, course]));
+  const records = !scopedStudent
+    ? await db.prepare('SELECT * FROM progress_records').all()
+    : await db.prepare('SELECT * FROM progress_records WHERE student_no=?').bind(scopedStudent).all();
+  records.results.sort((a,b) => curriculum.get(a.course_code).sort_order - curriculum.get(b.course_code).sort_order);
+  const attempts = !scopedStudent
     ? await db.prepare('SELECT * FROM course_attempts ORDER BY attempt_no').all()
-    : await db.prepare('SELECT * FROM course_attempts WHERE student_no=? ORDER BY attempt_no').bind(user.student_no).all();
+    : await db.prepare('SELECT * FROM course_attempts WHERE student_no=? ORDER BY attempt_no').bind(scopedStudent).all();
   const histories = new Map();
   for (const attempt of attempts.results) {
     const key = `${attempt.student_no}\0${attempt.course_code}`;
@@ -90,7 +94,9 @@ async function snapshot(db, user) {
     id: student.student_no, name: student.name, year: student.year_level, program: student.program, email: student.email, studentStatus: student.status,
     firstName: student.first_name, middleName: student.middle_name, lastName: student.last_name,
     isTransferee: Boolean(student.is_transferee), previousSchool: student.previous_school,
-    courses: records.results.filter(record => record.student_no === student.student_no).map(record => ({
+    courses: records.results.filter(record => record.student_no === student.student_no).map(saved => {
+      const record = { ...curriculum.get(saved.course_code), ...saved };
+      return ({
       code: record.course_code, title: record.title, units: record.units, year: record.year_level, semester: record.semester,
       prerequisite: record.prerequisite, sourceRequirementColumn: record.source_requirement_column,
       instructor: record.instructor, grade: record.grade, status: record.status,
@@ -101,7 +107,7 @@ async function snapshot(db, user) {
       ...(record.status === 'Failed' ? { retake: nextRetakeTerm(record.academic_year_taken, record.semester_taken) } : {}),
       ...(histories.has(`${student.student_no}\0${record.course_code}`) ? { pastAttempts: histories.get(`${student.student_no}\0${record.course_code}`) } : {}),
       category: `${yearLabels[record.year_level]} · ${terms[record.semester]}`,
-    })),
+    }); }),
   }));
   const audit = user.role === 'admin' ? await db.prepare(`SELECT a.*, s.name FROM record_audit a JOIN students s ON s.student_no=a.student_no ORDER BY a.created_at DESC, a.rowid DESC LIMIT 5`).all() : { results: [] };
   const events = user.role === 'admin' ? await db.prepare('SELECT * FROM admin_events ORDER BY created_at DESC,rowid DESC LIMIT 5').all() : { results: [] };
@@ -110,7 +116,12 @@ async function snapshot(db, user) {
     ...audit.results.map(item => ({ id: item.id, text: `${item.name} · ${item.course_code}`, detail: `Updated to ${item.status}${item.grade !== null ? ` · Grade ${item.grade.toFixed(2)}` : ''}`, createdAt: item.created_at })),
   ].sort((a,b) => b.createdAt.localeCompare(a.createdAt)).slice(0,5);
   return { role: user.role, mustChangePassword: false, students: profiles, activity, academicTerm: term,
+    ...(user.role === 'admin' && scopedStudent ? { partialStudents: true } : {}),
     ...(user.role === 'admin' ? { instructors: await listInstructors(db) } : {}) };
+}
+
+function mutationSnapshot(request, db, user, studentNo) {
+  return snapshot(db, user, request.headers.get('X-Gradeview-Partial') === '1' ? studentNo : undefined);
 }
 
 async function readAcademicTerm(db) {
@@ -223,7 +234,7 @@ async function api(request, env) {
       db.prepare('INSERT INTO admin_events(id,actor_id,action,title,detail) SELECT ?,?,?,?,? FROM accounts WHERE id=? AND password_hash=?').bind(crypto.randomUUID(), user.id, 'student.password_reset', `Student password reset: ${account.name}`, `${studentNo} · Password change required at next sign-in.`, account.id, nextHash),
     ]);
     if (result[0].meta.changes !== 1) return json({ error: 'This login changed during the reset. Refresh and try again.' }, 409);
-    return json({ ...await snapshot(db, user), passwordResetStudentId: studentNo });
+    return json({ ...await mutationSnapshot(request, db, user, studentNo), passwordResetStudentId: studentNo });
   }
   if (url.pathname === '/api/students' && request.method === 'POST') {
     if (user.role !== 'admin') return json({ error: 'Administrator access is required.' }, 403);
@@ -249,7 +260,7 @@ async function api(request, env) {
       if (/unique constraint/i.test(error.message)) return json({ error: 'That student ID already exists.' },409);
       throw error;
     }
-    return json({ ...await snapshot(db,user), createdStudentId: studentNo },201);
+    return json({ ...await mutationSnapshot(request,db,user,studentNo), createdStudentId: studentNo },201);
   }
   const profileMatch = url.pathname.match(/^\/api\/students\/([^/]+)$/);
   if (profileMatch && request.method === 'PATCH') {
@@ -268,7 +279,7 @@ async function api(request, env) {
       db.prepare('UPDATE students SET year_level=?,status=?,email=?,is_transferee=?,previous_school=? WHERE student_no=?').bind(input.year,input.studentStatus,input.email.trim(),isTransferee ? 1 : 0,isTransferee ? previousSchool : '',studentNo),
       db.prepare('INSERT INTO admin_events(id,actor_id,action,title,detail) VALUES(?,?,?,?,?)').bind(crypto.randomUUID(),user.id,'student.updated',`Student updated: ${student.name}`,`Year ${input.year} · ${input.studentStatus} · ${isTransferee ? `Transferee from ${previousSchool}` : 'Regular student'}`),
     ]);
-    return json(await snapshot(db,user));
+    return json(await mutationSnapshot(request,db,user,studentNo));
   }
   if (url.pathname === '/api/academic-term' && ['POST','PATCH'].includes(request.method)) {
     if (user.role !== 'admin') return json({ error: 'Administrator access is required.' },403);
@@ -305,7 +316,7 @@ async function api(request, env) {
       db.prepare('INSERT INTO admin_events(id,actor_id,action,title,detail) SELECT ?,?,?,?,? FROM progress_records WHERE student_no=? AND course_code=? AND operation_id=?').bind(operationId, user.id, 'course.retake_started', `Retake started: ${code}`, `${studentNo} · Attempt ${record.attempt_no + 1} · ${retakeLabel(next)}. Previous failed grade retained.`, studentNo, code, operationId),
     ]);
     if (result[0].meta.changes !== 1) return json({ error: 'This course changed. Refresh before starting its retake.' }, 409);
-    return json(await snapshot(db, user));
+    return json(await mutationSnapshot(request, db, user, studentNo));
   }
   const match = url.pathname.match(/^\/api\/students\/([^/]+)\/records\/([^/]+)$/);
   if (match && request.method === 'PATCH') {
@@ -341,7 +352,7 @@ async function api(request, env) {
       db.prepare('INSERT INTO record_audit(id,actor_id,student_no,course_code,grade,status,instructor,academic_year_taken,semester_taken,transfer_school,attempt_no) SELECT ?,?,?,?,?,?,?,?,?,?,? FROM progress_records WHERE student_no=? AND course_code=? AND operation_id=?').bind(operationId, user.id, studentNo, code, input.grade, input.status, instructor,yearTaken,semesterTaken,transferSchool,record.attempt_no,studentNo,code,operationId),
     ]);
     if (result[0].meta.changes !== 1) return json({ error: 'This course changed while saving. Reload its saved values and try again.' }, 409);
-    return json(await snapshot(db, user));
+    return json(await mutationSnapshot(request, db, user, studentNo));
   }
   return json({ error: 'API endpoint not found.' }, 404);
 }
@@ -358,7 +369,14 @@ export default {
     if (!new URL(request.url).pathname.startsWith('/api/')) return env.ASSETS.fetch(request);
     let response;
     try { response = await api(request, env); }
-    catch (error) { const requestId = crypto.randomUUID(); console.error(JSON.stringify({ event: 'api_error', requestId, method: request.method, status: error.status || 500 })); response = json({ error: error.status ? error.message : 'The request failed. Please try again.', requestId }, error.status || 500); }
+    catch (error) {
+      if (isDailyDatabaseLimit(error)) error = dailyDatabaseLimit();
+      const requestId = crypto.randomUUID();
+      console.error(JSON.stringify({ event: 'api_error', requestId, method: request.method, status: error.status || 500, ...(error.code === 'DATABASE_DAILY_LIMIT' ? { code: error.code } : {}) }));
+      response = json({ error: error.status ? error.message : 'The request failed. Please try again.', requestId,
+        ...(error.code === 'DATABASE_DAILY_LIMIT' ? { code: error.code, retryAt: error.retryAt } : {}),
+      }, error.status || 500, error.retryAfter ? { 'Retry-After': String(error.retryAfter) } : {});
+    }
     if (new URL(request.url).protocol === 'https:') response.headers.set('Strict-Transport-Security', 'max-age=31536000');
     return response;
   },

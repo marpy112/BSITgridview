@@ -5,7 +5,7 @@ import { nextAcademicTerm } from '../shared/academic.js';
 
 const base=process.env.GRADEVIEW_TEST_URL;
 if(!base || !process.env.GRADEVIEW_TEST_CONFIG || !['127.0.0.1','localhost'].includes(new URL(base).hostname))throw new Error('Use npm run test:admin to run against an isolated local test database.');
-const call=(route,method='GET',data,cookie)=>fetch(base+route,{method,headers:{Origin:base,'Content-Type':'application/json',...(cookie?{Cookie:cookie}:{})},...(data?{body:JSON.stringify(data)}:{})});
+const call=(route,method='GET',data,cookie,partial=false)=>fetch(base+route,{method,headers:{Origin:base,'Content-Type':'application/json',...(cookie?{Cookie:cookie}:{}),...(partial?{'X-Gradeview-Partial':'1'}:{})},...(data?{body:JSON.stringify(data)}:{})});
 async function login(role,identifier,password){const r=await call('/api/login','POST',{role,identifier,password});assert.equal(r.status,200,await r.clone().text());return{cookie:r.headers.get('Set-Cookie').split(';')[0],data:await r.json()};}
 
 test('term sequence moves first to second semester then first semester of the next school year',()=>{
@@ -26,11 +26,11 @@ test('admins create students, change year/status, manage grades, and roll terms 
     assert.equal((await call(`/api/students/${fixture.studentId}`,'PATCH',{year:3,studentStatus:'Inactive',email:''},student.cookie)).status,403);
     assert.equal((await call('/api/academic-term','POST',{expectedVersion:0},student.cookie)).status,403);
     assert.equal((await call('/api/students','POST',{...studentInput,year:5},cookie)).status,400);
-    const created=await call('/api/students','POST',studentInput,cookie);assert.equal(created.status,201,await created.clone().text());
-    const initial=await created.json();assert.equal(initial.createdStudentId,id);let profile=initial.students.find(s=>s.id===id);assert.equal(profile.courses.length,68);assert.equal(profile.year,1);assert.equal(profile.studentStatus,'Active');
+    const created=await call('/api/students','POST',studentInput,cookie,true);assert.equal(created.status,201,await created.clone().text());
+    const initial=await created.json();assert.equal(initial.createdStudentId,id);assert.equal(initial.partialStudents,true);assert.equal(initial.students.length,1);let profile=initial.students.find(s=>s.id===id);assert.equal(profile.courses.length,68);assert.equal(profile.year,1);assert.equal(profile.studentStatus,'Active');
     assert.equal((await call('/api/students','POST',studentInput,cookie)).status,409);
     const firstLogin=await login('student',id,'TEST SURNAME');assert.equal(firstLogin.data.mustChangePassword,true);
-    const profileUpdate=await call(`/api/students/${id}`,'PATCH',{year:3,studentStatus:'Inactive',email:'student@example.test'},cookie);assert.equal(profileUpdate.status,200);profile=(await profileUpdate.json()).students.find(s=>s.id===id);assert.equal(profile.year,3);assert.equal(profile.studentStatus,'Inactive');
+    const profileUpdate=await call(`/api/students/${id}`,'PATCH',{year:3,studentStatus:'Inactive',email:'student@example.test'},cookie,true);assert.equal(profileUpdate.status,200);const partial=await profileUpdate.json();assert.equal(partial.partialStudents,true);assert.equal(partial.students.length,1);profile=partial.students.find(s=>s.id===id);assert.equal(profile.year,3);assert.equal(profile.studentStatus,'Inactive');
     assert.equal((await login('student',id,'TEST SURNAME')).data.mustChangePassword,true,'profile edits preserve the initial password and change requirement');
     const endpoint=`/api/students/${id}/records/IT%2012`;
     const grade={grade:1.5,status:'Passed',instructor:'Test Instructor',academicYearTaken:'2026–2027',semesterTaken:'1'};

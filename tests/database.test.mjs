@@ -51,9 +51,12 @@ test('D1 login, authorization, curriculum, validation, persistent grades, audit,
   assert.equal((await request('/api/students/missing/records/IT%2012', { method: 'PATCH', cookie: admin.cookie, data: updates })).status, 404);
 
   try {
-    const saved = await request(endpoint, { method: 'PATCH', cookie: admin.cookie, data: updates });
+    const saved = await fetch(base + endpoint, { method: 'PATCH', headers: { Origin: base, Cookie: admin.cookie, 'Content-Type': 'application/json', 'X-Gradeview-Partial': '1' }, body: JSON.stringify(updates) });
     assert.equal(saved.status, 200, await saved.clone().text());
     const savedData = await saved.json();
+    assert.equal(savedData.partialStudents, true);
+    assert.equal(savedData.students.length, 1);
+    assert.equal(savedData.students[0].id, fixture.studentId);
     assert(savedData.activity.some(item => item.text.includes('IT 12')));
     const refreshed = await (await request('/api/session', { cookie: student.cookie })).json();
     const persisted = refreshed.students[0].courses.find(course => course.code === 'IT 12');

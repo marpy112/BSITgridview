@@ -60,6 +60,14 @@ Commit and push the implementation to `main` (or deploy it with the Vercel CLI),
 
 ## 3. Verify
 
+### Free database daily allowance
+
+When D1's free daily row-read or row-write allowance is exhausted, database requests fail until **00:00 UTC** (08:00 in Asia/Shanghai). Redeploying and changing passwords do not reset the allowance. The database gateway and API report this as **503** with `DATABASE_DAILY_LIMIT`, a reset timestamp, and `Retry-After`; the browser shows the reset time in its local timezone. Other database errors remain generic and do not expose SQL or credentials. After updating this handling, deploy the database gateway and the Vercel application.
+
+To reduce reads, the API reads the curriculum once per snapshot instead of joining it to every student course record. Current clients request partial responses for student creation, profile edits, grade saves, password resets, and retakes: these reload only the affected student's records, and the browser merges that student into the existing directory. Older clients still receive full responses. Login and explicit session refresh return the full authorized view. Duplicate focus/visibility refreshes are combined, with at least one minute between successful full refreshes; a page reload still explicitly fetches current data.
+
+Reference: [Cloudflare D1 free daily limit enforcement and reset](https://developers.cloudflare.com/changelog/post/2026-09-01-d1-free-tier-limit-enforcement/).
+
 ### Failed courses and retakes
 
 Migration `0009_course_retakes.sql` adds attempt history and record versions. Back up D1 and apply pending migrations before deploying this version to Vercel. Existing grades stay in their current attempts; the migration does not start retakes or change student grades.
