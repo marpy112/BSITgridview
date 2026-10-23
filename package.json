@@ -28,6 +28,8 @@
     "db:account": "node scripts/create-account.mjs",
     "test:api": "node --test tests/database.test.mjs",
     "db:import-students": "node scripts/import-students.mjs",
+    "db:import-quickenroll": "node --env-file-if-exists=.local/deployment/turso.env scripts/import-quickenroll.mjs",
+    "test:quickenroll": "node --test tests/quickenroll.test.mjs",
     "test:onboarding": "node --test tests/onboarding.test.mjs",
     "test:pdf": "node --test tests/pdf-export.test.mjs",
     "test:admin": "node scripts/test-admin.mjs"

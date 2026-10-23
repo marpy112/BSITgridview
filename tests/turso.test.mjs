@@ -6,6 +6,8 @@ import { hash, compare } from 'bcryptjs';
 import { createTursoDatabase, wrapTursoClient } from '../server/turso-database.js';
 import { handleVercelRequest } from '../server/vercel-api.js';
 import { inspectSource, importCopy, verifyCopy } from '../scripts/turso-transfer.mjs';
+import path from 'node:path';
+import {pathToFileURL} from 'node:url';
 
 async function sourceDatabase() {
   const client = createClient({ url: ':memory:' });
@@ -77,4 +79,25 @@ test('failed migration rolls back schema and rows instead of leaving a partial c
     await assert.rejects(importCopy(snapshot, target));
     assert.equal((await target.execute("SELECT COUNT(*) AS count FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")).rows[0].count, 0);
   } finally { source.close(); target.close(); }
+});
+
+test('Vercel JSON responses stream gzip when accepted and retain security headers',async()=>{
+  const directory=fs.mkdtempSync(path.resolve('.local/turso-compression-'));
+  const url=pathToFileURL(path.join(directory,'database.db')).href;
+  const client=createClient({url});
+  try{
+    await client.executeMultiple('CREATE TABLE academic_calendar(id INTEGER PRIMARY KEY,version INTEGER); INSERT INTO academic_calendar VALUES(1,0);');
+    const environment={NODE_ENV:'test',GRADEVIEW_DATABASE_PROVIDER:'turso',TURSO_DATABASE_URL:url};
+    const compressed=await handleVercelRequest(new Request('https://example.test/api/health',{headers:{'Accept-Encoding':'gzip'}}),environment);
+    assert.equal(compressed.status,200);
+    assert.equal(compressed.headers.get('Content-Encoding'),'gzip');
+    assert.equal(compressed.headers.get('Vary'),'Accept-Encoding');
+    assert.equal(compressed.headers.get('Cache-Control'),'no-store');
+    assert.equal(compressed.headers.get('X-Frame-Options'),'DENY');
+    const decoded=new Response(compressed.body.pipeThrough(new DecompressionStream('gzip')));
+    assert.deepEqual(await decoded.json(),{status:'ok'});
+    const plain=await handleVercelRequest(new Request('https://example.test/api/health',{headers:{'Accept-Encoding':'gzip;q=0'}}),environment);
+    assert.equal(plain.headers.get('Content-Encoding'),null);
+    assert.deepEqual(await plain.json(),{status:'ok'});
+  }finally{client.close();}
 });

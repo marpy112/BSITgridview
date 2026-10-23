@@ -74,10 +74,13 @@ async function snapshot(db, user, studentNo) {
     : await db.prepare('SELECT * FROM students WHERE student_no=?').bind(scopedStudent).all();
   // Read the curriculum once instead of joining it to every student's record.
   const curriculum = new Map((await db.prepare('SELECT * FROM courses ORDER BY sort_order').all()).results.map(course => [course.code, course]));
+  // Blank curriculum rows contain no student-specific information. Reconstruct
+  // those defaults locally instead of transferring them from the database.
+  const savedRecord = "(grade IS NOT NULL OR status<>'Not taken' OR instructor<>'Unassigned' OR academic_year_taken<>'' OR semester_taken<>'' OR transfer_school<>'' OR attempt_no<>1 OR version<>0)";
   const records = !scopedStudent
-    ? await db.prepare('SELECT * FROM progress_records').all()
-    : await db.prepare('SELECT * FROM progress_records WHERE student_no=?').bind(scopedStudent).all();
-  records.results.sort((a,b) => curriculum.get(a.course_code).sort_order - curriculum.get(b.course_code).sort_order);
+    ? await db.prepare(`SELECT * FROM progress_records WHERE ${savedRecord}`).all()
+    : await db.prepare(`SELECT * FROM progress_records WHERE student_no=? AND ${savedRecord}`).bind(scopedStudent).all();
+  const savedRecords = new Map(records.results.map(record => [`${record.student_no}\0${record.course_code}`, record]));
   const attempts = !scopedStudent
     ? await db.prepare('SELECT * FROM course_attempts ORDER BY attempt_no').all()
     : await db.prepare('SELECT * FROM course_attempts WHERE student_no=? ORDER BY attempt_no').bind(scopedStudent).all();
@@ -94,7 +97,11 @@ async function snapshot(db, user, studentNo) {
     id: student.student_no, name: student.name, year: student.year_level, program: student.program, email: student.email, studentStatus: student.status,
     firstName: student.first_name, middleName: student.middle_name, lastName: student.last_name,
     isTransferee: Boolean(student.is_transferee), previousSchool: student.previous_school,
-    courses: records.results.filter(record => record.student_no === student.student_no).map(saved => {
+    courses: [...curriculum.values()].map(course => {
+      const saved = savedRecords.get(`${student.student_no}\0${course.code}`) || {
+        course_code: course.code, grade: null, status: 'Not taken', instructor: 'Unassigned',
+        academic_year_taken: '', semester_taken: '', transfer_school: '', attempt_no: 1, version: 0,
+      };
       const record = { ...curriculum.get(saved.course_code), ...saved };
       return ({
       code: record.course_code, title: record.title, units: record.units, year: record.year_level, semester: record.semester,
