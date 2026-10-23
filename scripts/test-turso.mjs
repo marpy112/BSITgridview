@@ -25,6 +25,6 @@ try {
   }
   if (!base) throw new Error('Isolated Turso API did not start.');
   console.log('Testing the actual Vercel entry point with isolated libSQL data; hosted records are untouched.');
-  const result = spawnSync(process.execPath, ['--test','--test-concurrency=1','tests/database.test.mjs','tests/onboarding.test.mjs','tests/admin-management.test.mjs','tests/admin-tools.test.mjs','tests/transfer-students.test.mjs','tests/retakes.test.mjs','tests/production.test.mjs','tests/pdf-export.test.mjs'], { env: { ...env, GRADEVIEW_TEST_URL: base }, stdio: 'inherit', windowsHide: true });
+  const result = spawnSync(process.execPath, ['--test','--test-concurrency=1','tests/database.test.mjs','tests/onboarding.test.mjs','tests/admin-management.test.mjs','tests/admin-tools.test.mjs','tests/transfer-students.test.mjs','tests/retakes.test.mjs','tests/production.test.mjs','tests/pdf-export.test.mjs','tests/graduation.test.mjs'], { env: { ...env, GRADEVIEW_TEST_URL: base }, stdio: 'inherit', windowsHide: true });
   process.exitCode = result.status ?? 1;
 } finally { server.kill(); }

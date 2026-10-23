@@ -51,8 +51,12 @@ test('import preserves accounts, saved grades and full history; records and fail
     assert.equal((await client.execute('SELECT grade FROM course_attempts')).rows[0].grade,5);
     assert.equal((await client.execute("SELECT password_hash FROM accounts WHERE id='existing'")).rows[0].password_hash,'keep-student-hash');
     assert.equal((await client.execute('SELECT count(*) AS n FROM enrollment_source_records')).rows[0].n,3);
+    await client.execute("UPDATE students SET status='Graduated',graduation_approved_at='2026-10-23 00:00:00',graduation_approved_by='admin' WHERE student_no='5260001'");
     const second=await applyQuickenrollImport(client,data,{backupFile:path.join(dir,'before-again.json'),reviewFile:path.join(dir,'review-again.json'),hashCost:4});
     assert.equal(second.records,0);
+    const graduated=(await client.execute("SELECT status,graduation_approved_by FROM students WHERE student_no='5260001'")).rows[0];
+    assert.equal(graduated.status,'Graduated','a repeat enrollment import cannot undo graduation approval');
+    assert.equal(graduated.graduation_approved_by,'admin');
     assert.equal((await client.execute('SELECT count(*) AS n FROM course_attempts')).rows[0].n,1);
     assert.equal((await client.execute('SELECT count(*) AS n FROM record_audit')).rows[0].n,1);
   }finally{client.close();}

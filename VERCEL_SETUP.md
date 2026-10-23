@@ -62,6 +62,14 @@ Commit and push the implementation to `main` (or deploy it with the Vercel CLI),
 
 ## 3. Verify
 
+### Graduation approval
+
+Apply migration `0011_graduation_approval.sql` before deploying the graduation feature. It adds the approval time, approving account, and a status operation marker to student profiles. Existing grades and student statuses remain unchanged.
+
+Every required curriculum course, including Summer courses and OJT, needs a saved passing grade between 1.00 and 3.00. Eligible students see an awaiting-approval notice. Administrators see a **Graduation approvals** queue and an **Awaiting graduation approval** directory filter. Open the student record, select **Review graduation**, and confirm **Approve and mark Graduated**. Unsaved course changes must be resolved first. Approval rechecks all required grades, saves an audit event, and updates the student's status. Finishing the grades alone does not change that status.
+
+Graduation cannot be assigned through the ordinary student status selector. Concurrent or repeated approvals are rejected, and an older student form cannot undo a newer approval. Previously failed attempts do not prevent graduation once every current required course has passed. Enrollment reimports preserve an approved Graduated status.
+
 ### Free database daily allowance
 
 When D1's free daily row-read or row-write allowance is exhausted, database requests fail until **00:00 UTC** (08:00 in Asia/Shanghai). Redeploying and changing passwords do not reset the allowance. The database gateway and API report this as **503** with `DATABASE_DAILY_LIMIT`, a reset timestamp, and `Retry-After`; the browser shows the reset time in its local timezone. Other database errors remain generic and do not expose SQL or credentials. After updating this handling, deploy the database gateway and the Vercel application.

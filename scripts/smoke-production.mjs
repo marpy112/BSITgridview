@@ -6,6 +6,7 @@ for (const [path, status, method = 'GET'] of [
   ['/api/students/routing-check', 401, 'PATCH'],
   ['/api/students/routing-check/records/IT%2001', 401, 'PATCH'],
   ['/api/students/routing-check/reset-password', 401, 'POST'],
+  ['/api/students/routing-check/graduation', 401, 'POST'],
   ['/api/students/routing-check/records/IT%2001/retake', 401, 'POST'],
 ]) {
   const response = await fetch(base + path, { method, headers: { Origin: base, 'Content-Type': 'application/json' },

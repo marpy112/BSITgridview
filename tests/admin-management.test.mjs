@@ -49,7 +49,7 @@ test('admins create students, change year/status, manage grades, and roll terms 
     assert(snapshot.activity.some(event=>event.text==='Academic term advanced'));
     const refreshed=await(await call('/api/session','GET',null,cookie)).json();assert.equal(refreshed.academicTerm.schoolYearStart,2027);
     const own=await(await call('/api/session','GET',null,student.cookie)).json();assert.equal(own.academicTerm.schoolYearStart,2027);
-    assert.equal((await call(`/api/students/${id}`,'PATCH',{year:4,studentStatus:'Graduated',email:''},cookie)).status,200);
+    assert.equal((await call(`/api/students/${id}`,'PATCH',{year:4,studentStatus:'Active',email:''},cookie)).status,200);
   }finally{
     executeLocal(`DELETE FROM sessions WHERE account_id IN (SELECT id FROM accounts WHERE student_no='${id}');DELETE FROM record_audit WHERE student_no='${id}';DELETE FROM progress_records WHERE student_no='${id}';DELETE FROM accounts WHERE student_no='${id}';DELETE FROM students WHERE student_no='${id}';`);
     fixture.dispose();

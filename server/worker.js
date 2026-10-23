@@ -4,6 +4,7 @@ import { validateStudent } from './studentValidation.js';
 import { normalizeSchoolAcronym, validSchoolAcronym } from '../shared/transfer.js';
 import { nextRetakeTerm, retakeLabel } from '../shared/retakes.js';
 import { dailyDatabaseLimit, isDailyDatabaseLimit } from './database-errors.js';
+import { graduationProgress } from '../shared/graduation.js';
 
 const COOKIE = 'gradeview_session';
 const SESSION_SECONDS = 60 * 60 * 8;
@@ -96,6 +97,7 @@ async function snapshot(db, user, studentNo) {
   const profiles = students.results.map(student => ({
     id: student.student_no, name: student.name, year: student.year_level, program: student.program, email: student.email, studentStatus: student.status,
     firstName: student.first_name, middleName: student.middle_name, lastName: student.last_name,
+    graduationApprovedAt: student.graduation_approved_at || null,
     isTransferee: Boolean(student.is_transferee), previousSchool: student.previous_school,
     courses: [...curriculum.values()].map(course => {
       const saved = savedRecords.get(`${student.student_no}\0${course.code}`) || {
@@ -116,6 +118,7 @@ async function snapshot(db, user, studentNo) {
       category: `${yearLabels[record.year_level]} · ${terms[record.semester]}`,
     }); }),
   }));
+  for (const profile of profiles) profile.graduation = graduationProgress(profile.courses, [...curriculum.keys()]);
   const audit = user.role === 'admin' ? await db.prepare(`SELECT a.*, s.name FROM record_audit a JOIN students s ON s.student_no=a.student_no ORDER BY a.created_at DESC, a.rowid DESC LIMIT 5`).all() : { results: [] };
   const events = user.role === 'admin' ? await db.prepare('SELECT * FROM admin_events ORDER BY created_at DESC,rowid DESC LIMIT 5').all() : { results: [] };
   const activity = [
@@ -221,6 +224,30 @@ async function api(request, env) {
     }
     return json({ ...await snapshot(db, user), createdInstructorId: id }, 201);
   }
+  const graduationMatch = url.pathname.match(/^\/api\/students\/([^/]+)\/graduation$/);
+  if (graduationMatch && request.method === 'POST') {
+    if (user.role !== 'admin') return json({ error: 'Administrator access is required.' }, 403);
+    const studentNo = decodeURIComponent(graduationMatch[1]);
+    const input = await body(request);
+    if (input.confirmStudentId !== studentNo) return json({ error: 'Confirm the student ID before approving graduation.' }, 400);
+    const student = await db.prepare('SELECT name,status FROM students WHERE student_no=?').bind(studentNo).first();
+    if (!student) return json({ error: 'Student not found.' }, 404);
+    if (student.status === 'Graduated') return json({ error: 'This student is already marked Graduated.' }, 409);
+    const operationId = crypto.randomUUID();
+    // Eligibility and the status change happen in the same write. A missing,
+    // pending, or failing required course prevents approval, even after review.
+    const result = await db.batch([
+      db.prepare(`UPDATE students SET status='Graduated',graduation_approved_at=CURRENT_TIMESTAMP,graduation_approved_by=?,status_operation_id=?
+        WHERE student_no=? AND status<>'Graduated' AND EXISTS(SELECT 1 FROM courses)
+        AND NOT EXISTS(SELECT 1 FROM courses c LEFT JOIN progress_records r ON r.course_code=c.code AND r.student_no=students.student_no
+          WHERE r.student_no IS NULL OR r.status<>'Passed' OR r.grade IS NULL OR r.grade<1 OR r.grade>3)`)
+        .bind(user.id, operationId, studentNo),
+      db.prepare('INSERT INTO admin_events(id,actor_id,action,title,detail) SELECT ?,?,?,?,? FROM students WHERE student_no=? AND status_operation_id=?')
+        .bind(operationId, user.id, 'student.graduation_approved', `Graduation approved: ${student.name}`, `${studentNo} · All required courses passed. Status changed to Graduated.`, studentNo, operationId),
+    ]);
+    if (result[0].meta.changes !== 1) return json({ error: 'All required courses must have saved passing grades before graduation can be approved. Refresh and review this student.' }, 409);
+    return json({ ...await mutationSnapshot(request, db, user, studentNo), graduationApprovedStudentId: studentNo });
+  }
   const resetMatch = url.pathname.match(/^\/api\/students\/([^/]+)\/reset-password$/);
   if (resetMatch && request.method === 'POST') {
     if (user.role !== 'admin') return json({ error: 'Administrator access is required.' }, 403);
@@ -248,6 +275,7 @@ async function api(request, env) {
     const input = await body(request);
     const error = validateStudent(input);
     if (error) return json({ error },400);
+    if (input.studentStatus === 'Graduated') return json({ error: 'Create the student first, then review and approve their completed curriculum for graduation.' }, 400);
     const studentNo = input.id.trim();
     const duplicate = await db.prepare('SELECT student_no AS id FROM students WHERE student_no=? COLLATE NOCASE UNION ALL SELECT identifier FROM accounts WHERE role=\'student\' AND identifier=?').bind(studentNo,studentNo).first();
     if (duplicate) return json({ error: 'That student ID already has a student record or login account.' },409);
@@ -276,16 +304,20 @@ async function api(request, env) {
     const input = await body(request);
     const error = validateStudent(input,true);
     if (error) return json({ error },400);
-    const student = await db.prepare('SELECT name,is_transferee,previous_school FROM students WHERE student_no=?').bind(studentNo).first();
+    const student = await db.prepare('SELECT name,status,is_transferee,previous_school FROM students WHERE student_no=?').bind(studentNo).first();
     if (!student) return json({ error: 'Student not found.' },404);
+    if (input.expectedStudentStatus !== undefined && input.expectedStudentStatus !== student.status) return json({ error: 'This student’s status changed. Refresh their record before saving these details.' }, 409);
+    if (input.studentStatus === 'Graduated' && student.status !== 'Graduated') return json({ error: 'Review and approve graduation from the student record before changing their status to Graduated.' }, 409);
     const isTransferee = input.isTransferee ?? Boolean(student.is_transferee);
     const previousSchool = input.previousSchool === undefined ? student.previous_school : normalizeSchoolAcronym(input.previousSchool);
     if (isTransferee && !validSchoolAcronym(previousSchool)) return json({ error: 'Enter the transferee’s previous school acronym.' }, 400);
     if (!isTransferee && student.is_transferee && await db.prepare("SELECT 1 FROM progress_records WHERE student_no=? AND transfer_school<>'' LIMIT 1").bind(studentNo).first()) return json({ error: 'This student has transferred grades. Remove their transferred-school entries before changing the student type.' }, 409);
-    await db.batch([
-      db.prepare('UPDATE students SET year_level=?,status=?,email=?,is_transferee=?,previous_school=? WHERE student_no=?').bind(input.year,input.studentStatus,input.email.trim(),isTransferee ? 1 : 0,isTransferee ? previousSchool : '',studentNo),
-      db.prepare('INSERT INTO admin_events(id,actor_id,action,title,detail) VALUES(?,?,?,?,?)').bind(crypto.randomUUID(),user.id,'student.updated',`Student updated: ${student.name}`,`Year ${input.year} · ${input.studentStatus} · ${isTransferee ? `Transferee from ${previousSchool}` : 'Regular student'}`),
+    const operationId = crypto.randomUUID();
+    const result = await db.batch([
+      db.prepare("UPDATE students SET year_level=?,status=?,email=?,is_transferee=?,previous_school=?,graduation_approved_at=CASE WHEN ?='Graduated' THEN graduation_approved_at ELSE NULL END,graduation_approved_by=CASE WHEN ?='Graduated' THEN graduation_approved_by ELSE NULL END,status_operation_id=? WHERE student_no=? AND status=?").bind(input.year,input.studentStatus,input.email.trim(),isTransferee ? 1 : 0,isTransferee ? previousSchool : '',input.studentStatus,input.studentStatus,operationId,studentNo,student.status),
+      db.prepare('INSERT INTO admin_events(id,actor_id,action,title,detail) SELECT ?,?,?,?,? FROM students WHERE student_no=? AND status_operation_id=?').bind(operationId,user.id,'student.updated',`Student updated: ${student.name}`,`Year ${input.year} · ${input.studentStatus} · ${isTransferee ? `Transferee from ${previousSchool}` : 'Regular student'}`,studentNo,operationId),
     ]);
+    if (result[0].meta.changes !== 1) return json({ error: 'This student’s status changed. Refresh their record before saving these details.' }, 409);
     return json(await mutationSnapshot(request,db,user,studentNo));
   }
   if (url.pathname === '/api/academic-term' && ['POST','PATCH'].includes(request.method)) {

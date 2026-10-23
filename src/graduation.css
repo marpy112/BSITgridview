@@ -1,0 +1,21 @@
+.graduation-notice{display:flex;align-items:center;gap:16px;padding:20px 22px;margin:20px 0;border:1px solid #c8dfd4;border-radius:12px;background:#f0f8f3;color:#2d6450}
+.graduation-icon{display:grid;place-items:center;flex:0 0 40px;width:40px;height:40px;border-radius:50%;background:#dfefe5;font-size:21px}
+.graduation-notice>div{flex:1;min-width:0}
+.graduation-notice h2{font-size:16px;line-height:1.5;letter-spacing:-.3px;margin:0 0 5px;color:inherit}
+.graduation-notice p{font-size:12px;line-height:1.8;margin:0;max-width:760px}
+.graduation-notice button{white-space:nowrap;font-size:11px}
+.graduation-approved{background:#edf3ff;border-color:#d1ddf6;color:#4267a5}
+.graduation-approved .graduation-icon{background:#dfe8fa}
+.graduation-queue{margin-bottom:24px}
+.graduation-queue ul{list-style:none;padding:0;margin:16px 0 0}
+.graduation-queue li{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 0;border-top:1px solid var(--line)}
+.graduation-queue li strong{display:block;font-size:13px;line-height:1.6;color:var(--text)}
+.graduation-queue li span{display:block;font-size:11px;line-height:1.8;color:var(--muted)}
+.graduation-review-summary{padding:18px;margin:20px 0;background:var(--bg);border:1px solid var(--line);border-radius:10px;display:grid;gap:8px}
+.graduation-review-summary strong{font-size:15px;line-height:1.6;color:var(--text)}
+.graduation-review-summary span{font-size:12px;color:var(--muted);line-height:1.8}
+.graduation-review-summary b{font-size:13px;color:#39725c;line-height:1.8}
+body.dark .graduation-notice{background:#22382e;border-color:#365b48;color:#c3e5cf}
+body.dark .graduation-icon{background:#31503d}
+body.dark .graduation-approved{background:#25364d;border-color:#3a526c;color:#c2d5f5}
+@media(max-width:650px){.graduation-notice{align-items:flex-start;flex-wrap:wrap;padding:17px 16px;gap:12px}.graduation-notice>div{flex-basis:calc(100% - 56px)}.graduation-notice button{width:100%}.graduation-queue .admin-section-heading{flex-wrap:wrap;gap:12px}.graduation-queue li{align-items:flex-start;flex-direction:column;gap:10px}}
