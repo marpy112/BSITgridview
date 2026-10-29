@@ -5,6 +5,9 @@ import { normalizeSchoolAcronym, validSchoolAcronym } from '../shared/transfer.j
 import { nextRetakeTerm, retakeLabel } from '../shared/retakes.js';
 import { dailyDatabaseLimit, isDailyDatabaseLimit } from './database-errors.js';
 import { graduationProgress } from '../shared/graduation.js';
+import { publicCertificate, adminCertificates } from './certificates.js';
+import { studentCertificates } from './student-certificates.js';
+import { databaseReady } from './readiness.js';
 
 const COOKIE = 'gradeview_session';
 const SESSION_SECONDS = 60 * 60 * 8;
@@ -21,9 +24,9 @@ function cookie(request, token, maxAge) {
   return `${COOKIE}=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${maxAge}${secure}`;
 }
 
-async function body(request) {
+async function body(request, limit = 4096) {
   if (request.headers.get('Content-Type')?.split(';')[0].trim().toLowerCase() !== 'application/json') throw Object.assign(new Error('Use application/json.'), { status: 415 });
-  if (Number(request.headers.get('Content-Length')) > 4096) throw Object.assign(new Error('Request too large.'), { status: 413 });
+  if (Number(request.headers.get('Content-Length')) > limit) throw Object.assign(new Error('Request too large.'), { status: 413 });
   const reader = request.body?.getReader();
   const chunks = [];
   let size = 0;
@@ -33,7 +36,7 @@ async function body(request) {
         const { done, value } = await reader.read();
         if (done) break;
         size += value.byteLength;
-        if (size > 4096) { await reader.cancel(); throw Object.assign(new Error('Request too large.'), { status: 413 }); }
+        if (size > limit) { await reader.cancel(); throw Object.assign(new Error('Request too large.'), { status: 413 }); }
         chunks.push(value);
       }
     } finally { reader.releaseLock(); }
@@ -143,10 +146,12 @@ async function api(request, env) {
   const url = new URL(request.url);
   const db = env.DB;
   if (!db) return json({ error: 'Database binding is not configured.' }, 503);
+  if (url.pathname.startsWith('/api/certificates/verify/')) {
+    return await publicCertificate(request, db, json) || json({ error: 'Certificate not found. Check the certificate link.' }, 404);
+  }
   if (url.pathname === '/api/health' && request.method === 'GET') {
     try {
-      const row = await db.prepare('SELECT version FROM academic_calendar WHERE id=1').first();
-      if (!row) throw new Error();
+      if (!await databaseReady(db)) throw new Error();
       return json({ status: 'ok' });
     } catch { return json({ status: 'unavailable' }, 503); }
   }
@@ -203,6 +208,10 @@ async function api(request, env) {
     return json(await snapshot(db, { ...user, must_change_password: 0 }), 200, { 'Set-Cookie': cookie(request,token,SESSION_SECONDS) });
   }
   if (user.must_change_password) return json({ error: 'Change your initial password before accessing student records.', code: 'PASSWORD_CHANGE_REQUIRED' }, 403);
+  const studentCertificateResponse = await studentCertificates(request, db, user, json, env.CERTIFICATE_ORIGIN);
+  if (studentCertificateResponse) return studentCertificateResponse;
+  const certificateResponse = await adminCertificates(request, env, user, { json, body });
+  if (certificateResponse) return certificateResponse;
   if (url.pathname === '/api/instructors' && ['GET', 'POST'].includes(request.method)) {
     if (user.role !== 'admin') return json({ error: 'Administrator access is required.' }, 403);
     if (request.method === 'GET') return json({ instructors: await listInstructors(db) });

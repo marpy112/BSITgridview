@@ -1,0 +1,22 @@
+.student-sidebar .nav-item{position:relative}
+.student-sidebar .student-nav-icon{display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.student-sidebar .nav-item .student-nav-label{font-size:12px;line-height:1.5}
+.student-sidebar .nav-item .student-nav-mobile-label{display:none}
+.student-sidebar .nav-item:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+
+@media(max-width:800px){
+  .sidebar.student-sidebar{inset:auto 0 0;width:100%;height:auto;min-height:76px;display:block;border-right:0;border-top:1px solid var(--line);padding:7px max(10px,env(safe-area-inset-right)) max(7px,env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left));background:var(--panel);box-shadow:0 -5px 22px #17325b08;z-index:40}
+  .student-sidebar>.brand,.student-sidebar>.workspace,.student-sidebar>.sidebar-bottom{display:none}
+  .student-sidebar>nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;width:100%}
+  .student-sidebar .nav-item{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-height:59px;width:100%;margin:0;padding:7px 3px;border-radius:9px;text-align:center;font-size:10px}
+  .student-sidebar .nav-item .student-nav-icon{height:23px;font-size:0}
+  .student-sidebar .nav-item .student-nav-label{display:none}
+  .student-sidebar .nav-item .student-nav-mobile-label{display:block;color:inherit;font-size:10px;line-height:1.4;font-weight:500;white-space:nowrap}
+  .sidebar.student-sidebar .nav-item .student-certificate-nav-count{position:absolute;inset:1px auto auto calc(50% + 6px);min-width:17px;height:17px;font-size:9px;line-height:1;padding:0 5px;margin:0;border:1px solid var(--panel);border-radius:6px}
+  main.student-main{margin-left:0;width:100%;padding:0 22px calc(104px + env(safe-area-inset-bottom))}
+  .student-toast#toast{bottom:calc(95px + env(safe-area-inset-bottom));z-index:50;max-width:calc(100% - 32px);text-align:center}
+}
+
+@media(max-width:520px){
+  main.student-main{padding-left:16px;padding-right:16px}
+}

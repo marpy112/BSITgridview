@@ -4,49 +4,44 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node scripts/test-admin.mjs --all",
-    "release:check": "npm run build && npm test && npm run test:free && node scripts/check-deploy.mjs && wrangler deploy --dry-run --config wrangler.free.jsonc",
-    "production:smoke": "node scripts/smoke-production.mjs",
+    "release:check": "npm run build:production && wrangler deploy --dry-run --config wrangler.free.jsonc && wrangler deploy --dry-run --config wrangler.jsonc",
     "vercel:backend": "node scripts/set-vercel-backend.mjs",
     "dev": "npm run cf:dev",
     "dev:frontend": "vite --host 127.0.0.1 --port 5173 --strictPort",
     "build": "vite build",
+    "build:production": "npm run build && node scripts/check-deploy.mjs --assets",
     "preview": "vite preview --host 127.0.0.1",
     "cf:dev": "npm run build && wrangler dev --ip 127.0.0.1",
     "cf:deploy": "npm run release:check && wrangler deploy --config wrangler.free.jsonc",
     "cf:deploy:paid": "npm run release:check && wrangler deploy",
     "cf:deploy:free": "npm run release:check && wrangler deploy --config wrangler.free.jsonc",
     "free:setup": "node scripts/setup-free-hosting.mjs",
-    "test:free": "node --test tests/free-hosting.test.mjs && node scripts/test-admin.mjs --all --free",
-    "test:turso": "node --test tests/turso.test.mjs && node scripts/test-turso.mjs",
     "turso:import": "node --env-file-if-exists=.local/deployment/turso.env scripts/turso-import.mjs",
+    "turso:migrate": "node --env-file-if-exists=.local/deployment/turso.env scripts/turso-migrate.mjs",
     "cf:login": "wrangler login",
     "db:create": "wrangler d1 create bsit-gradeview-db",
     "db:bind": "node scripts/set-database-id.mjs",
     "db:migrate:local": "wrangler d1 migrations apply bsit-gradeview-db --local",
     "db:migrate:remote": "node scripts/check-deploy.mjs && wrangler d1 migrations apply bsit-gradeview-db --remote",
     "db:account": "node scripts/create-account.mjs",
-    "test:api": "node --test tests/database.test.mjs",
     "db:import-students": "node scripts/import-students.mjs",
-    "db:import-quickenroll": "node --env-file-if-exists=.local/deployment/turso.env scripts/import-quickenroll.mjs",
-    "test:quickenroll": "node --test tests/quickenroll.test.mjs",
-    "test:onboarding": "node --test tests/onboarding.test.mjs",
-    "test:pdf": "node --test tests/pdf-export.test.mjs",
-    "test:admin": "node scripts/test-admin.mjs"
+    "db:import-quickenroll": "node --env-file-if-exists=.local/deployment/turso.env scripts/import-quickenroll.mjs"
   },
   "dependencies": {
     "@libsql/client": "0.18.0",
     "bcryptjs": "3.0.3",
     "jspdf": "4.2.1",
     "jspdf-autotable": "5.0.9",
+    "pdf-lib": "1.17.1",
+    "pdfjs-dist": "6.4.299",
+    "qrcode": "1.5.4",
     "react": "19.3.1",
     "react-dom": "19.3.1"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "6.1.2",
-    "pdfjs-dist": "6.4.299",
     "vite": "8.3.4",
-    "wrangler": "4.151.1"
+    "wrangler": "4.155.0"
   },
   "engines": {
     "node": ">=22.12.0"

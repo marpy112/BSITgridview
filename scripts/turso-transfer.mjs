@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 
 // Dependency order preserves foreign keys, including retake history and audits.
-export const tables = ['students', 'courses', 'accounts', 'progress_records', 'record_audit', 'academic_calendar', 'admin_events', 'instructors', 'course_attempts', 'enrollment_source_records', 'd1_migrations', 'sessions', 'login_attempts'];
+export const tables = ['students', 'courses', 'accounts', 'progress_records', 'record_audit', 'academic_calendar', 'admin_events', 'instructors', 'course_attempts', 'enrollment_source_records', 'certificate_templates', 'certificate_batches', 'certificates', 'd1_migrations', 'sessions', 'login_attempts'];
 const transient = new Set(['sessions', 'login_attempts']);
 const quote = name => '"' + name.replaceAll('"', '""') + '"';
 
@@ -15,7 +15,7 @@ export async function inspectSource(client) {
   const snapshot = [];
   for (const name of tables) {
     const schema = catalog.find(row => row.type === 'table' && row.name === name);
-    if (!schema) { if (['d1_migrations', 'enrollment_source_records'].includes(name)) continue; throw new Error(`Source is missing the required ${name} table.`); }
+    if (!schema) { if (['d1_migrations', 'enrollment_source_records', 'certificate_templates', 'certificate_batches', 'certificates'].includes(name)) continue; throw new Error(`Source is missing the required ${name} table.`); }
     const columns = (await client.execute(`PRAGMA table_info(${quote(name)})`)).rows;
     const primary = columns.filter(column => column.pk).sort((a,b) => a.pk - b.pk).map(column => quote(column.name));
     const order = primary.length ? primary.join(',') : 'rowid';

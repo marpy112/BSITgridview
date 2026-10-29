@@ -1,0 +1,15 @@
+.git/
+.local/
+.wrangler/
+.codex/
+.agents/
+.aws/
+.env
+.env.*
+.dev.vars
+.dev.vars.*
+backups/
+*.sql.backup
+.db-account-*.sql
+node_modules/
+.npm-cache/

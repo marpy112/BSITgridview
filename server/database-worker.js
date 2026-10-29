@@ -1,5 +1,6 @@
 // Free-plan Worker: only database I/O runs here. The API and bcrypt run on Vercel.
 import { dailyDatabaseLimit, isDailyDatabaseLimit } from './database-errors.js';
+import { databaseReady } from './readiness.js';
 
 const reply = (data, status = 200, headers = {}) => Response.json(data, { status, headers: {
   'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff',
@@ -29,7 +30,8 @@ async function readStatements(request) {
       const { done, value } = await reader.read();
       if (done) break;
       size += value.byteLength;
-      if (size > 65536) { await reader.cancel(); throw new Error('Invalid payload.'); }
+      // Authenticated template writes may include a single-page PDF (up to 1 MB, base64 encoded).
+      if (size > 1500000) { await reader.cancel(); throw new Error('Invalid payload.'); }
       chunks.push(value);
     }
   } finally { reader.releaseLock(); }
@@ -58,7 +60,7 @@ export default {
     const path = new URL(request.url).pathname;
     if (path === '/api/health' && request.method === 'GET') {
       try {
-        const ready = await env.DB.prepare('SELECT version FROM academic_calendar WHERE id=1').first();
+        const ready = await databaseReady(env.DB);
         return reply({ status: ready ? 'ok' : 'unavailable' }, ready ? 200 : 503);
       } catch { return reply({ status: 'unavailable' }, 503); }
     }

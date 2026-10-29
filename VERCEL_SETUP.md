@@ -1,5 +1,7 @@
 # Free Vercel API + Cloudflare D1
 
+For the current certificate release and deployment order, use [PRODUCTION_RELEASE.md](PRODUCTION_RELEASE.md).
+
 For the prepared Turso replacement, follow [TURSO_SETUP.md](TURSO_SETUP.md). The Cloudflare setup below remains active until a verified copy is ready and `GRADEVIEW_DATABASE_PROVIDER=turso` is set in Vercel Production.
 
 Frontend and Node API: https://bsitgridview.vercel.app
@@ -56,7 +58,7 @@ Get-Content -Raw .local/deployment/database-secret.txt | Set-Clipboard
 
 Paste into the Vercel secret value field. Never prefix these variable names with `VITE_`, commit them, or paste them into chat. A Cloudflare API token or OAuth credential is not needed on Vercel. Preview deployments do not get the production secret and cannot use the production API.
 
-Keep Framework **Vite**, build command **npm run build**, output directory **dist**, production branch **main**, and Node.js **22.x or newer**. The Node API is deployed from the root `api` directory separately from the static build. `vercel.json` sets a 60-second function duration. Keep the local `/api/:path*` rewrite to `/api/index?__gradeview_path=:path*`; it passes the requested route to the Node function. Do not replace it with an external gateway rewrite. A standalone Vite function named `[...path].js` does not provide Next.js catch-all routing for nested paths.
+Keep Framework **Vite**, build command **npm run build:production**, output directory **dist**, production branch **main**, and Node.js **22.x or newer**. The Node API is deployed from the root `api` directory separately from the static build. `vercel.json` sets a 60-second function duration. Keep the local `/api/:path*` rewrite to `/api/index?__gradeview_path=:path*`; it passes the requested route to the Node function. Do not replace it with an external gateway rewrite. A standalone Vite function named `[...path].js` does not provide Next.js catch-all routing for nested paths.
 
 Commit and push the implementation to `main` (or deploy it with the Vercel CLI), then wait for the production deployment. If you add or change environment variables after a deployment, redeploy so the function receives them. Setting variables alone does not update an existing deployment.
 
@@ -98,13 +100,9 @@ The student view, course details, and PDF exports show the school of origin. Stu
 
 When updating to the instructor-directory and student-reset features, first back up D1 and run `npm.cmd run db:migrate:remote` to apply `0007_instructors.sql`, then deploy the updated application to Vercel. The existing database gateway needs no redeployment. Do not push the updated API before applying its database migration.
 
-```powershell
-npm.cmd run production:smoke -- https://bsitgridview.vercel.app
-```
+Follow the signed-out endpoint checks in [PRODUCTION_RELEASE.md](PRODUCTION_RELEASE.md). Expected: homepage 200, database health 200, signed-out session 401, and signed-out nested API requests 401. A plain-text Vercel 404 for a nested API path means the request did not reach the Node function; deploy the updated routing configuration. Health returns 503 if the certificate schema is missing. Then verify an existing administrator login, student login, PDF download, and a refresh after saving an intended change. Session cookies should be HttpOnly and Secure on HTTPS.
 
-Expected: homepage 200, database health 200, signed-out session 401, and signed-out nested API requests 401. These checks reveal no student information and make no student changes. A plain-text Vercel 404 for a nested API path means the request did not reach the Node function; deploy the updated routing configuration. Then test an existing administrator login, student first-login password change, a PDF download, and a refresh after saving a grade. Session cookies should be HttpOnly and Secure on HTTPS.
-
-`npm run test:free` runs the existing API integration suite through the actual Vercel entry point and local database gateway, using an isolated database. It also checks denied gateway access, bounded payloads, preview isolation, and rollback after a failed transaction. No hosted student records are used by these tests.
+`npm run release:check` builds the app, checks production configuration and public assets, checks server/script syntax, and dry-runs both Worker configurations. It makes no database changes and does not deploy. Test files and test runners were removed at the project owner's request.
 
 Local development still uses `npm run cf:dev` with the full API and a local D1 database. `npm run cf:deploy:paid` retains the optional all-in-one Worker deployment and requires an appropriate paid plan; it is not used for this free setup.
 

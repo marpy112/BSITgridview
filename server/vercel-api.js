@@ -50,7 +50,7 @@ export async function handleVercelRequest(request, environment = process.env) {
     ...(request.body ? { duplex: 'half' } : {}),
   });
   try {
-    const response = await worker.fetch(forwarded, { DB: db, APP_ORIGIN: servedOrigin });
+    const response = await worker.fetch(forwarded, { DB: db, APP_ORIGIN: servedOrigin, CERTIFICATE_ORIGIN: appOrigin });
     if (response.body && response.ok && /(?:^|,)\s*gzip\s*(?:,|$)/i.test(request.headers.get('Accept-Encoding') || '') && response.headers.get('Content-Type')?.includes('application/json')) {
       const headers = new Headers(response.headers);
       headers.set('Content-Encoding', 'gzip');

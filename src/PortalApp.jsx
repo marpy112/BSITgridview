@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import StudentPortal from './App.jsx';
 import AdminDashboard from './admin/AdminDashboard.jsx';
 import StudentLoginPage from './auth/StudentLoginPage.jsx';
@@ -7,6 +7,7 @@ import ChangePasswordPage from './auth/ChangePasswordPage.jsx';
 import './portal.css';
 import { apiRequest, mergeStudents } from './api.js';
 import { defaultAcademicTerm } from '../shared/academic.js';
+const VerificationPage = lazy(() => import('./certificates/VerificationPage.jsx'));
 
 function initialRoute() {
   if (typeof window === 'undefined') return '/student/login';
@@ -37,6 +38,7 @@ export default function PortalApp() {
 
   useEffect(() => {
     let active = true;
+    if (initialRoute().startsWith('/verify/')) { setLoading(false); return; }
     apiRequest('/api/session').then(data => {
       if (!active) return;
       applySnapshot(data);
@@ -76,6 +78,7 @@ export default function PortalApp() {
   },[role,mustChangePassword]);
 
   useEffect(() => {
+    if (route.startsWith('/verify/')) { document.title = 'Verify certificate | IBACMI Information Technology'; return; }
     const portal = route.startsWith('/admin') ? 'Administrator' : 'Student';
     const isLogin = route.endsWith('/login') || !role;
     document.title = `BSIT gradeview — ${portal} ${isLogin ? 'login' : 'portal'}`;
@@ -163,6 +166,7 @@ export default function PortalApp() {
     }
   }
 
+  if (route.startsWith('/verify/')) return <Suspense fallback={<div className="database-loading" role="status">Loading certificate verification…</div>}><VerificationPage token={route.slice('/verify/'.length)} /></Suspense>;
   if (loading) return <div className="database-loading" role="status">Loading BSIT gradeview…</div>;
   if (role && connectionError) return <div className="database-loading"><p role="alert">{connectionError}</p><button className="primary-button" onClick={() => setConnectionError('')}>Return to portal</button></div>;
   if (role === 'student' && mustChangePassword) return <ChangePasswordPage onSave={changePassword} onLogout={logout} />;

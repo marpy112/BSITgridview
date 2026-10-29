@@ -1,5 +1,7 @@
 # Move Gradeview to Turso Free
 
+For schema upgrades on the existing Turso installation, use [PRODUCTION_RELEASE.md](PRODUCTION_RELEASE.md). Do not run the initial import again.
+
 The Vercel frontend and Node API stay in the same project. The API can connect directly to Turso with `GRADEVIEW_DATABASE_PROVIDER=turso`. Cloudflare stays the default until the Production environment is deliberately changed. Existing SQLite constraints, password hashes, grade history, instructor choices, and student permissions are preserved.
 
 ## 1. Create the target
@@ -47,12 +49,12 @@ Only after successful verification, add these **Production** environment variabl
 
 Deploy the updated code and redeploy Production after setting the variables. Keep the existing local `/api/:path*` rewrite and Node.js 22 or newer. The existing Cloudflare variables may remain configured during the transition; Turso mode does not use them. Preview deployments still cannot access the production database.
 
-Run `npm.cmd run production:smoke -- https://bsitgridview.vercel.app`, then sign in with the existing administrator password. Confirm the student count, save one intended change, reload it, and check a student login and PDF. The Cloudflare Worker and its daily row-read allowance are no longer in the application's request path once Turso mode is deployed.
+Run the signed-out endpoint checks in [PRODUCTION_RELEASE.md](PRODUCTION_RELEASE.md), then sign in with the existing administrator password. Confirm the student count, reload an intended change, and check a student login and PDF. The Cloudflare Worker and its daily row-read allowance are no longer in the application's request path once Turso mode is deployed.
 
 Before any new Turso writes, reverting `GRADEVIEW_DATABASE_PROVIDER` to `cloudflare` and redeploying can return to the original database. Once Turso has accepted new grades or profile edits, copy those changes back before reverting; switching a connection does not synchronize databases.
 
 ## Validation and limits
 
-`npm.cmd run test:turso` runs adapter/rollback/import verification tests and the existing API integration suite through the actual Vercel entry point with an isolated local libSQL database. It does not use hosted student data. `npm.cmd run test:free` continues to check the Cloudflare path.
+`npm.cmd run release:check` verifies the production build and deployment configuration without publishing or changing a database. `npm.cmd run turso:migrate -- --plan` lists pending migrations without applying them. Test files and test runners were removed at the project owner's request.
 
 Turso Free currently includes 5 GB storage, 500 million rows read monthly, and 10 million rows written monthly. It still has usage limits. See [official pricing](https://turso.tech/pricing) and the [TypeScript SDK reference](https://docs.turso.tech/sdk/ts/reference).
