@@ -2,6 +2,14 @@ import { gradeForAverage } from '../../shared/retakes.js';
 
 export const recordStatuses = ['Passed', 'In progress', 'Incomplete', 'Failed', 'Not taken'];
 
+export function surnameFirst(student) {
+  const lastName = student.lastName?.trim();
+  if (!lastName) return student.name;
+
+  const givenNames = [student.firstName?.trim(), student.middleName?.trim()].filter(Boolean).join(' ');
+  return givenNames ? `${lastName}, ${givenNames}` : student.name;
+}
+
 export function summarizeDashboard(students) {
   const counts = Object.fromEntries(recordStatuses.map(status => [status, 0]));
   const cohorts = [1, 2, 3, 4].map(year => ({ year, students: 0, passed: 0, records: 0 }));

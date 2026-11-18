@@ -319,15 +319,18 @@ async function api(request, env) {
     const student = await db.prepare('SELECT name,status,is_transferee,previous_school FROM students WHERE student_no=?').bind(studentNo).first();
     if (!student) return json({ error: 'Student not found.' },404);
     if (input.expectedStudentStatus !== undefined && input.expectedStudentStatus !== student.status) return json({ error: 'This student’s status changed. Refresh their record before saving these details.' }, 409);
-    if (input.studentStatus === 'Graduated' && student.status !== 'Graduated') return json({ error: 'Review and approve graduation from the student record before changing their status to Graduated.' }, 409);
+    const markingGraduated = input.studentStatus === 'Graduated' && student.status !== 'Graduated';
     const isTransferee = input.isTransferee ?? Boolean(student.is_transferee);
     const previousSchool = input.previousSchool === undefined ? student.previous_school : normalizeSchoolAcronym(input.previousSchool);
     if (isTransferee && !validSchoolAcronym(previousSchool)) return json({ error: 'Enter the transferee’s previous school acronym.' }, 400);
     if (!isTransferee && student.is_transferee && await db.prepare("SELECT 1 FROM progress_records WHERE student_no=? AND transfer_school<>'' LIMIT 1").bind(studentNo).first()) return json({ error: 'This student has transferred grades. Remove their transferred-school entries before changing the student type.' }, 409);
     const operationId = crypto.randomUUID();
     const result = await db.batch([
-      db.prepare("UPDATE students SET year_level=?,status=?,email=?,is_transferee=?,previous_school=?,graduation_approved_at=CASE WHEN ?='Graduated' THEN graduation_approved_at ELSE NULL END,graduation_approved_by=CASE WHEN ?='Graduated' THEN graduation_approved_by ELSE NULL END,status_operation_id=? WHERE student_no=? AND status=?").bind(input.year,input.studentStatus,input.email.trim(),isTransferee ? 1 : 0,isTransferee ? previousSchool : '',input.studentStatus,input.studentStatus,operationId,studentNo,student.status),
-      db.prepare('INSERT INTO admin_events(id,actor_id,action,title,detail) SELECT ?,?,?,?,? FROM students WHERE student_no=? AND status_operation_id=?').bind(operationId,user.id,'student.updated',`Student updated: ${student.name}`,`Year ${input.year} · ${input.studentStatus} · ${isTransferee ? `Transferee from ${previousSchool}` : 'Regular student'}`,studentNo,operationId),
+      db.prepare(`UPDATE students SET year_level=?,status=?,email=?,is_transferee=?,previous_school=?,
+        graduation_approved_at=CASE WHEN ? THEN CURRENT_TIMESTAMP WHEN ?='Graduated' THEN graduation_approved_at ELSE NULL END,
+        graduation_approved_by=CASE WHEN ? THEN ? WHEN ?='Graduated' THEN graduation_approved_by ELSE NULL END,
+        status_operation_id=? WHERE student_no=? AND status=?`).bind(input.year,input.studentStatus,input.email.trim(),isTransferee ? 1 : 0,isTransferee ? previousSchool : '',Number(markingGraduated),input.studentStatus,Number(markingGraduated),user.id,input.studentStatus,operationId,studentNo,student.status),
+      db.prepare('INSERT INTO admin_events(id,actor_id,action,title,detail) SELECT ?,?,?,?,? FROM students WHERE student_no=? AND status_operation_id=?').bind(operationId,user.id,'student.updated',`Student updated: ${student.name}`,`Year ${input.year} · ${markingGraduated ? 'Marked Graduated in Edit student details' : input.studentStatus} · ${isTransferee ? `Transferee from ${previousSchool}` : 'Regular student'}`,studentNo,operationId),
     ]);
     if (result[0].meta.changes !== 1) return json({ error: 'This student’s status changed. Refresh their record before saving these details.' }, 409);
     return json(await mutationSnapshot(request,db,user,studentNo));
