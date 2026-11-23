@@ -1,0 +1,31 @@
+.grade-import-page,.grade-import-review { display: grid; gap: 18px; min-width: 0; }
+.grade-import-file { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px; }
+.grade-import-file > div { display: grid; gap: 7px; flex: 1 1 260px; max-width: 500px; min-width: 0; }
+.grade-import-file label { font-size: 13px; font-weight: 600; }
+.grade-import-file input { width: 100%; min-width: 0; min-height: 44px; border: 1px solid var(--line); border-radius: 8px; padding: 6px; color: var(--text); background: var(--panel); font-size: 13px; }
+.grade-import-file input::file-selector-button { margin-right: 10px; padding: 6px 10px; border: 0; border-radius: 5px; background: #edf2ff; color: #284fbf; font: inherit; cursor: pointer; }
+.grade-import-file small,.grade-import-format,.grade-import-message { font-size: 12px; line-height: 1.65; }
+.grade-import-file small { color: var(--muted); }
+.grade-import-file .primary-button { display: inline-flex; align-items: center; gap: 8px; align-self: center; }
+.grade-import-format { margin-top: 18px; }
+.grade-import-format summary { cursor: pointer; font-weight: 600; }
+.grade-import-format p { margin: 8px 0 0; max-width: 76ch; }
+.grade-import-review .admin-section-heading,.grade-import-message { margin: 0; }
+.grade-import-message.form-error { padding: 12px 16px; border-radius: 8px; background: #fff1f1; color: #922f39; }
+.grade-import-summary { margin: 0; display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 10px; }
+.grade-import-summary > div { padding: 12px; border: 1px solid var(--line); border-radius: 8px; }
+.grade-import-summary dt { font-size: 12px; color: var(--muted); }
+.grade-import-summary dd { font-size: 22px; font-weight: 700; margin: 5px 0 0; }
+.grade-import-rows { min-width: 0; }
+.grade-import-rows h3 { font-size: 14px; margin: 0 0 8px; }
+.grade-import-table { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; }
+.grade-import-table table { width: 100%; min-width: 500px; border-collapse: collapse; }
+.grade-import-table th,.grade-import-table td { padding: 11px 12px; height: auto; text-align: left; font-size: 12px; border-bottom: 1px solid var(--line); }
+.grade-import-table tr:last-child td { border-bottom: 0; }
+.grade-import-table th { background: #f3f6fd; color: #425370; }
+.grade-import-pagination,.grade-import-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+.grade-import-pagination span { font-size: 12px; margin-right: auto; }
+@media (max-width: 600px) {
+  .grade-import-summary { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .grade-import-file input { font-size: 16px; }
+}

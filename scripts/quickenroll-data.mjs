@@ -1,18 +1,7 @@
 import { mapSourceCourse, instructorKey } from '../shared/source-courses.js';
+import { interpretSourceGrade } from '../shared/grade-import.js';
 export { mapSourceCourse, instructorKey };
-
-export function interpretSourceGrade(finalGrade, removalGrade='') {
-  const value=String(removalGrade || finalGrade).trim();
-  if (/^(?:\d+(?:\.\d+)?|\.\d+)$/.test(value)) {
-    const grade=Number(value);
-    if (grade>=1 && grade<=5) return {grade,status:grade<=3?'Passed':'Failed'};
-    if (grade===0) return {grade:null,status:'In progress',review:'zero_grade_placeholder'};
-    return {review:'grade_out_of_range'};
-  }
-  if(value==='INC') return {grade:null,status:'Incomplete'};
-  if(['','NG','TBE'].includes(value)) return {grade:null,status:'In progress',...(value?{review:'pending_grade_marker'}:{})};
-  return {review:'unsupported_grade_marker'};
-}
+export { interpretSourceGrade };
 
 function termNumber(entry) {
   const semesters={ '1st':1,'2nd':2,'Summer':3 };

@@ -9,6 +9,7 @@ import { publicCertificate, adminCertificates } from './certificates.js';
 import { studentCertificates } from './student-certificates.js';
 import { databaseReady } from './readiness.js';
 import { adminDeansList } from './deans-list.js';
+import { adminGradeImport } from './grade-import.js';
 
 const COOKIE = 'gradeview_session';
 const SESSION_SECONDS = 60 * 60 * 8;
@@ -211,6 +212,8 @@ async function api(request, env) {
   if (user.must_change_password) return json({ error: 'Change your initial password before accessing student records.', code: 'PASSWORD_CHANGE_REQUIRED' }, 403);
   const deansListResponse = await adminDeansList(request, db, user, json);
   if (deansListResponse) return deansListResponse;
+  const gradeImportResponse = await adminGradeImport(request, db, user, { json, body, digest });
+  if (gradeImportResponse) return gradeImportResponse;
   const studentCertificateResponse = await studentCertificates(request, db, user, json, env.CERTIFICATE_ORIGIN);
   if (studentCertificateResponse) return studentCertificateResponse;
   const certificateResponse = await adminCertificates(request, env, user, { json, body });

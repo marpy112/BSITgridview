@@ -29,12 +29,16 @@ for (const [title,code] of Object.entries(aliases)) titles.set(title,code);
 const canonical = new Map(curriculum.map(c=>[c.code,c]));
 export const instructorKey = name => name.normalize('NFC').replace(/\s+/g,' ').trim().toLowerCase();
 
-export function mapSourceCourse(course) {
+export function mapSourceCourse(course, { verifyCode = false } = {}) {
   let code = titles.get(normalize(course.title));
   if (normalize(course.title)==='school guidance program') {
     const number=/^SGP\s*0?([1-6])$/i.exec(course.subjectCode)?.[1];
     code=number ? `SGP ${number}` : undefined;
   }
   if (!code || Number(course.units)!==canonical.get(code).units) return null;
+  if (verifyCode) {
+    const supplied = course.subjectCode.trim().replace(/\s+/g, ' ').toUpperCase();
+    if (!supplied || (canonical.has(supplied) && supplied !== code)) return null;
+  }
   return code;
 }

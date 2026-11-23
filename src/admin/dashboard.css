@@ -156,7 +156,7 @@
 @media (max-width: 600px) {
   .admin-shell .admin-sidebar { position: sticky; top: 0; width: 100%; height: auto; padding: 9px 10px; z-index: 5; border-right: 0; border-bottom: 1px solid var(--line); }
   .admin-sidebar > .brand,.admin-sidebar .workspace,.admin-sidebar .sidebar-bottom,.admin-sidebar .admin-sidebar-logout { display: none; }
-  .admin-sidebar nav { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 2px; margin: 0; }
+  .admin-sidebar nav { display: grid; grid-template-columns: repeat(7,minmax(0,1fr)); gap: 2px; margin: 0; }
   .admin-sidebar .nav-item { margin: 0; padding: 7px 2px; border-radius: 7px; }
   .admin-sidebar .nav-item .admin-nav-label { font-size: 9px; }
   .admin-main { margin-left: 0; padding: 0 16px; }
