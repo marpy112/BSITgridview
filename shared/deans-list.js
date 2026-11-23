@@ -1,6 +1,6 @@
 export const deansListGradeLimit = 2;
 export const normalizeSchoolYear = value => String(value || '').trim().replace(/[\u2013\u2014]/g, '-');
-export const deansListCriteria = 'Every final grade must be 1.00–2.00; no INC; not a transferee; all enrolled subjects must have posted final grades for the selected semester.';
+export const deansListCriteria = 'Every enrolled and additional saved subject in the selected semester must have verified units and a final grade of 1.00–2.00. Students must have no INC or transferred subjects and cannot be transferees.';
 
 export function validDeansListTerm(schoolYear, semester) {
   const match = /^(\d{4})-(\d{4})$/.exec(normalizeSchoolYear(schoolYear));
@@ -35,16 +35,20 @@ export function evaluateDeansList({ students = [], records = [], enrollments = [
     const addReason = (code, text, blocksVerification = false) => { reasons.push({ code, text }); pending ||= blocksVerification; };
     if (student.isTransferee || semesterRecords.some(record => record.transferSchool)) addReason('transferee', 'Transferee or transferred subject record.');
     const roster = rosters[0];
-    const subjects = roster?.subjects || [];
-    if (!roster || !subjects.length) addReason('missing_roster', 'Semester enrollment roster is missing; completeness cannot be verified.', true);
+    const enrolled = roster?.subjects || [];
+    if (!enrolled.length) addReason('missing_roster', 'Semester enrollment roster is missing. The report needs the roster to verify completeness.', true);
     if (rosters.some(item => item.problem || rosterSignature(item) !== rosterSignature(roster))) addReason('roster_conflict', 'Enrollment subjects or year level need verification.', true);
-    const expectedCodes = new Set(subjects.map(subject => subject.code).filter(Boolean));
-    if (subjects.some(subject => !subject.code) || expectedCodes.size !== subjects.length) addReason('unmapped_subject', 'Enrolled subjects include an unmapped or duplicate curriculum subject.', true);
-    if (semesterRecords.some(record => !expectedCodes.has(record.code)) && roster) addReason('extra_subject', 'Saved semester subjects differ from the enrolled subject list.', true);
+    const expectedCodes = new Set(enrolled.map(subject => subject.code).filter(Boolean));
+    if (expectedCodes.size !== enrolled.length) addReason('unmapped_subject', 'Enrolled subjects include an unmapped or duplicate curriculum subject.', true);
     const byCourse = new Map();
     for (const record of semesterRecords) {
       if (!byCourse.has(record.code)) byCourse.set(record.code, []);
       byCourse.get(record.code).push(record);
+    }
+    const subjects = [...enrolled];
+    for (const [code, matches] of byCourse) {
+      if (!code) addReason('unmapped_subject', 'A saved semester subject has no curriculum code.', true);
+      if (code && !expectedCodes.has(code)) subjects.push({ code, units: matches[0].units });
     }
     const incomplete = semesterRecords.filter(record => record.status === 'Incomplete');
     if (incomplete.length) addReason('inc', `INC: ${[...new Set(incomplete.map(record => record.code))].join(', ')}.`, true);
@@ -63,7 +67,7 @@ export function evaluateDeansList({ students = [], records = [], enrollments = [
     }
     if (missing.length) addReason('missing_grades', `Final grade missing, invalid, or ambiguous: ${missing.join(', ')}.`, true);
     if (invalidUnits.length) addReason('invalid_units', `Subject units need verification: ${invalidUnits.join(', ')}.`, true);
-    const complete = Boolean(roster && subjects.length && !pending && posted === subjects.length && units > 0);
+    const complete = Boolean(enrolled.length && !pending && posted === subjects.length && units > 0);
     const gwa = complete ? weighted / (100 * units) : null;
     const status = reasons.length ? (pending ? 'pending' : 'ineligible') : 'qualified';
     results.push({ id: student.id, name: student.name, program: student.program, yearLevel: roster?.yearLevel || '',

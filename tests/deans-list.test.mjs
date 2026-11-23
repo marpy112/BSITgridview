@@ -53,8 +53,21 @@ test('requires a known full roster and does not treat saved subjects as the comp
   assert.ok(reasons(evaluate({ enrollments: [] })).includes('missing_roster'));
   assert.ok(reasons(evaluate({ enrollments: [{ ...roster, subjects: [] }] })).includes('missing_roster'));
   assert.ok(reasons(evaluate({ enrollments: [{ ...roster, problem: true }] })).includes('roster_conflict'));
-  const extra = { ...records[0], code: 'C' };
-  assert.ok(reasons(evaluate({ records: [...records, extra] })).includes('extra_subject'));
+});
+
+test('includes additional verified subjects in the selected semester in qualification and GWA', () => {
+  const extra = { ...records[0], code: 'C', units: 2, grade: 1.25 };
+  const report = evaluate({ records: [...records, extra, { ...extra, schoolYear: '2027-2028', grade: 3 }, { ...extra, semester: '2', grade: 3 }] });
+  assert.equal(report.qualified.length, 1);
+  assert.equal(report.qualified[0].posted, 3);
+  assert.equal(report.qualified[0].expected, 3);
+  assert.equal(report.qualified[0].units, 6);
+  assert.equal(report.qualified[0].gwa, 1.5);
+  assert.ok(reasons(evaluate({ records: [records[0], extra] })).includes('missing_grades'), 'an extra subject does not replace an enrolled one');
+  assert.ok(reasons(evaluate({ records: [...records, { ...extra, grade: 2.25 }] })).includes('grade_limit'));
+  assert.ok(reasons(evaluate({ records: [...records, { ...extra, status: 'Incomplete', grade: null }] })).includes('inc'));
+  assert.ok(reasons(evaluate({ records: [...records, { ...extra, units: undefined }] })).includes('invalid_units'));
+  assert.ok(reasons(evaluate({ records: [...records, extra, extra] })).includes('missing_grades'));
 });
 
 test('rejects duplicate or unmapped roster subjects, conflicting rosters, and inconsistent units', () => {

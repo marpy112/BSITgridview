@@ -4,14 +4,14 @@ Open **Admin → Dean’s List** and select a school year and semester. Year-lev
 
 A student qualifies only when:
 
-- Every enrolled subject has a valid saved final grade for that exact school year and semester.
+- Every enrolled subject and each additional saved subject from the selected school year and semester has a valid final grade and verified curriculum units.
 - Every individual grade is between **1.00 and 2.00**, inclusive. A qualifying GWA alone is insufficient.
 - No subject in that semester has an INC.
 - The student is not a transferee and has no transferred subject record in that semester.
 
-The report uses imported `enrollment_source_records` to establish the complete subject roster. Missing or conflicting rosters, unmapped or duplicate subjects, inconsistent units, extra saved subjects, missing final grades, and ambiguous attempts are held under **Awaiting complete records**. Existing numeric grades are never substituted from another term. Previous failed attempts remain attached to their original term.
+The report uses imported `enrollment_source_records` to verify the enrollment roster. Missing or conflicting rosters, unmapped or duplicate subjects, inconsistent units, missing final grades, and ambiguous attempts are held under **Awaiting complete records**. The report also checks grades on subjects saved under that same term. Previous failed attempts remain attached to their original term.
 
-GWA is unit-weighted across every enrolled subject, including PE, NSTP, and guidance subjects. Grades are checked before rounding the displayed GWA. Changing the institution’s included-subject policy would require an explicit rule change.
+GWA is unit-weighted across all enrolled and additional saved subjects for the selected semester, including PE, NSTP, and guidance subjects. Grades are checked before rounding the displayed GWA.
 
 **Print Dean’s List** and **Download PDF** fetch a fresh server report before producing output. Only qualified students in the selected year-level filter appear in the report. The report includes its term, criteria, completeness counts, GWA, and verification timestamp. These are generated reports; the feature does not change grades or save an award decision.
 

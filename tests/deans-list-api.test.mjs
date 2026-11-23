@@ -35,6 +35,13 @@ test('database report uses a consistent selected-term roster and final-grade sna
     assert.equal(report.qualified.length, 1);
     assert.equal(report.qualified[0].gwa, 1.75);
     assert.ok(report.verifiedAt);
+    await client.executeMultiple(`INSERT INTO courses VALUES('IT 01','Introduction to Computing',3,1);
+      INSERT INTO progress_records VALUES('1','IT 01',1,'Passed','','2026-2027','1');`);
+    report = await deansListReport(db, '2026-2027', '1');
+    assert.equal(report.qualified[0].units, 9);
+    assert.equal(report.qualified[0].posted, 3);
+    assert.equal(report.qualified[0].gwa, 1.5);
+    await client.execute("DELETE FROM progress_records WHERE course_code='IT 01'");
     await client.execute("UPDATE progress_records SET grade=NULL,status='Incomplete' WHERE course_code='GE CORE 2'");
     report = await deansListReport(db, '2026-2027', '1');
     assert.equal(report.qualified.length, 0, 'fresh output must remove a student after an INC is saved');
