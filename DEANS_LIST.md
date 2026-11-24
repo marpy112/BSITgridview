@@ -13,7 +13,7 @@ The report uses imported `enrollment_source_records` to verify the enrollment ro
 
 GWA is unit-weighted across all enrolled and additional saved subjects for the selected semester, including PE, NSTP, and guidance subjects. Grades are checked before rounding the displayed GWA.
 
-**Print Dean’s List** and **Download PDF** fetch a fresh server report before producing output. Only qualified students in the selected year-level filter appear in the report. The report includes its term, criteria, completeness counts, GWA, and verification timestamp. These are generated reports; the feature does not change grades or save an award decision.
+**Print Dean’s List** and **Download PDF** fetch a fresh server report before producing output. Only qualified students in the selected year-level filter appear in the report. The printed and downloaded lists show the `DEANS LISTER` heading and the selected semester and school year above the student table.
 
 The API is `GET /api/deans-list?schoolYear=2026-2027&semester=1`, restricted to administrators. Semesters are `1`, `2`, and `summer`. It reads grades, earlier attempts, student profiles, and roster information in one transactional database batch; no schema migration is required.
 

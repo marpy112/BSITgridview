@@ -1,7 +1,7 @@
 import { nextRetakeTerm, retakeLabel } from '../shared/retakes.js';
 import { termLabels, yearLabels } from './data.js';
 
-export async function createPdf(headers, rows, { title = 'Data report', metadata = [] } = {}) {
+export async function createPdf(headers, rows, { title = 'Data report', metadata = [], subtitle } = {}) {
   const [{ jsPDF }, { autoTable }] = await Promise.all([import('jspdf'), import('jspdf-autotable')]);
   const landscape = headers.length > 6;
   const doc = new jsPDF({ orientation: landscape ? 'landscape' : 'portrait', unit: 'mm', format: 'a4', compress: true });
@@ -9,15 +9,18 @@ export async function createPdf(headers, rows, { title = 'Data report', metadata
   const height = doc.internal.pageSize.getHeight();
   const margin = 14;
   const available = width - margin * 2;
-  const generated = new Intl.DateTimeFormat('en-PH', { timeZone: 'Asia/Shanghai', dateStyle: 'medium', timeStyle: 'short' }).format(new Date());
-  const details = [...metadata.filter(Boolean), `${rows.length} ${rows.length === 1 ? 'record' : 'records'} | Generated ${generated} (UTC+8)`];
-  doc.setProperties({ title: `BSIT gradeview - ${title}`, subject: 'Student academic records', creator: 'BSIT gradeview', author: 'BSIT gradeview' });
+  const details = [...metadata.filter(Boolean)];
+  if (!subtitle) {
+    const generated = new Intl.DateTimeFormat('en-PH', { timeZone: 'Asia/Shanghai', dateStyle: 'medium', timeStyle: 'short' }).format(new Date());
+    details.push(`${rows.length} ${rows.length === 1 ? 'record' : 'records'} | Generated ${generated} (UTC+8)`);
+  }
+  doc.setProperties({ title: subtitle ? title : `BSIT gradeview - ${title}`, subject: 'Student academic records', creator: 'BSIT gradeview', author: 'BSIT gradeview' });
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   const detailLines = details.flatMap(line => doc.splitTextToSize(String(line), available));
   doc.setFontSize(12);
   const titleLines = doc.splitTextToSize(title, available);
-  const tableTop = 30 + titleLines.length * 5 + detailLines.length * 4;
+  const tableTop = subtitle ? 33 : 30 + titleLines.length * 5 + detailLines.length * 4;
   const columnStyles = {};
   headers.forEach((header, index) => {
     if (['Units','Grade','Courses','Total units','Earned units','GWA','Year level','Completed courses','Pending records','Students assigned','Passed records','Total records','Completion'].includes(header)) columnStyles[index] = { halign: 'center' };
@@ -36,8 +39,15 @@ export async function createPdf(headers, rows, { title = 'Data report', metadata
     rowPageBreak: 'avoid',
     willDrawPage() {
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(16);
       doc.setTextColor(32, 55, 95);
+      if (subtitle) {
+        doc.setFontSize(20);
+        doc.text(title, width / 2, 19, { align: 'center' });
+        doc.setFontSize(11);
+        doc.text(subtitle, width / 2, 26, { align: 'center' });
+        return;
+      }
+      doc.setFontSize(16);
       doc.text('BSIT gradeview', margin, 19);
       doc.setFontSize(12);
       doc.text(titleLines, margin, 27);

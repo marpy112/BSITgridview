@@ -1,18 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
 import { apiRequest } from '../api.js';
 import { downloadPdf } from '../export.js';
-import { deansListCriteria } from '../../shared/deans-list.js';
 import AdminIcon from './AdminIcon.jsx';
 import './deans-list.css';
 
 const semesterLabels = { '1': '1st semester', '2': '2nd semester', summer: 'Summer' };
+const exportSemesterLabels = { '1': 'FIRST SEMESTER', '2': 'SECOND SEMESTER', summer: 'SUMMER' };
+const exportTitle = 'DEANS LISTER';
 const yearLabel = year => year ? `Year ${year}` : 'Not recorded';
 const formatGwa = value => value === null ? '—' : value.toFixed(2);
 const verifiedLabel = value => new Intl.DateTimeFormat('en-PH', { timeZone: 'Asia/Shanghai', dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
 const rowsForYear = (rows, year) => year === 'all' ? rows : rows.filter(row => row.yearLevel === year);
 
-function QualifiedTable({ rows, print = false }) {
-  return <table className="deans-table"><caption className={print ? '' : 'deans-visually-hidden'}>Qualified students with verified semester grades</caption><thead><tr><th scope="col">Student number</th><th scope="col">Student name</th><th scope="col">Year level</th><th scope="col">Final grades</th><th scope="col">Units</th><th scope="col">GWA</th></tr></thead><tbody>{rows.map(row => <tr key={row.id}><td>{row.id}</td><th scope="row">{row.name}</th><td>{yearLabel(row.yearLevel)}</td><td>{row.posted}/{row.expected}</td><td>{row.units}</td><td><strong>{formatGwa(row.gwa)}</strong></td></tr>)}</tbody></table>;
+function QualifiedTable({ rows }) {
+  return <table className="deans-table"><caption className="deans-visually-hidden">Qualified students with verified semester grades</caption><thead><tr><th scope="col">Student number</th><th scope="col">Student name</th><th scope="col">Year level</th><th scope="col">Final grades</th><th scope="col">Units</th><th scope="col">GWA</th></tr></thead><tbody>{rows.map(row => <tr key={row.id}><td>{row.id}</td><th scope="row">{row.name}</th><td>{yearLabel(row.yearLevel)}</td><td>{row.posted}/{row.expected}</td><td>{row.units}</td><td><strong>{formatGwa(row.gwa)}</strong></td></tr>)}</tbody></table>;
 }
 
 export default function DeansList({ academicTerm, students, onReviewStudent }) {
@@ -36,6 +37,7 @@ export default function DeansList({ academicTerm, students, onReviewStudent }) {
   const pending = rowsForYear(report?.pending || [], year);
   const ineligible = rowsForYear(report?.ineligible || [], year);
   const termLabel = `${schoolYear.replace('-', '–')} · ${semesterLabels[semester]}`;
+  const exportSubtitle = `${exportSemesterLabels[semester]}  SY ${schoolYear}`;
   const selectedRows = ({ qualified, pending, ineligible })[tab];
   const locked = Boolean(busy);
 
@@ -79,7 +81,7 @@ export default function DeansList({ academicTerm, students, onReviewStudent }) {
       if (!rows.length) { setNotice('No qualified students remain after refreshing. No report was produced.'); setBusy(''); return; }
       if (action === 'print') { setPrintRequested(true); return; }
       await downloadPdf(`deans-list-${schoolYear}-${semester}-${year}.pdf`, ['Student number','Student name','Year level','Final grades','Units','GWA'], rows.map(row => [row.id,row.name,yearLabel(row.yearLevel),`${row.posted}/${row.expected}`,row.units,formatGwa(row.gwa)]), {
-        title: 'Dean’s List', metadata: [termLabel, year === 'all' ? 'All year levels' : yearLabel(year), deansListCriteria, 'GWA is weighted by the units of every subject counted in the selected semester.', `Verified: ${verifiedLabel(fresh.verifiedAt)} (UTC+8)`],
+        title: exportTitle, subtitle: exportSubtitle,
       });
       if (mounted.current) { setNotice('Dean’s List PDF downloaded.'); setBusy(''); }
     } catch (error) {
@@ -101,7 +103,7 @@ export default function DeansList({ academicTerm, students, onReviewStudent }) {
         {selectedRows.length ? tab === 'qualified' ? <><p className="deans-result-note">Only these students appear in the printed list and PDF. Every enrolled subject has a valid final grade of 2.00 or better. Sorted by semester GWA.</p><div className="deans-table-scroll" tabIndex={0} role="region" aria-label="Qualified Dean’s List students"><QualifiedTable rows={qualified} /></div></> : <div className="deans-review-list">{selectedRows.map(row => <article key={row.id}><div className="deans-review-heading"><div><h3>{row.name}</h3><p>{row.id} · {yearLabel(row.yearLevel)} · {row.posted}/{row.expected || '?'} final grades posted</p></div><button className="secondary-button" disabled={locked} onClick={() => { const student = students.find(student => student.id === row.id); if (student) onReviewStudent(student); }}>Review student</button></div><ul>{row.reasons.map(reason => <li key={reason.code}>{reason.text}</li>)}</ul></article>)}</div> : <div className="dashboard-empty" role="status"><AdminIcon name="deans-list" /><h3>{tab === 'qualified' ? 'No qualified students for this selection' : tab === 'pending' ? 'No records awaiting completion' : 'No excluded students for this selection'}</h3><p>{tab === 'qualified' ? 'Only students with a verified semester roster, all final grades at 2.00 or better, no INC, and no transferee status are included.' : 'Change the semester or year-level filter to review another group.'}</p></div>}
         <p className="deans-result-note">{report.evaluated} students have enrollment or grade records in this semester. {report.notInTerm} have neither and were not evaluated. Only qualified students are printable. Data is verified again before printing or downloading.</p>
       </section>
-      <section className="deans-print-report" aria-label="Printable Dean’s List"><div className="deans-print-brand">BSIT gradeview</div><h1>Dean’s List</h1><h2>{termLabel}</h2><p>{year === 'all' ? 'All year levels' : yearLabel(year)} · {qualified.length} qualified {qualified.length === 1 ? 'student' : 'students'}</p><p className="deans-print-criteria">{deansListCriteria}</p><p>Verified {verifiedLabel(report.verifiedAt)} (UTC+8)</p><QualifiedTable rows={qualified} print /><p className="deans-print-footer">GWA is weighted by the units of every subject counted in the selected semester. For administrative review.</p></section>
+      <section className="deans-print-report" aria-label="Printable Dean’s List"><h1>{exportTitle}</h1><h2>{exportSubtitle}</h2><QualifiedTable rows={qualified} /><p className="deans-print-footer">For administrative review.</p></section>
     </>}
   </div>;
 }
